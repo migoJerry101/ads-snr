@@ -1,0 +1,69 @@
+﻿namespace ads.Models.Data
+{
+    public class OldeDB
+    {
+        public string O3DATE { get; set; }
+        public string O3SKU { get; set; }
+        public string O3STS { get; set; }
+        public string O3STR { get; set; }
+        public decimal O3AVED { get; set; }
+        public decimal O3TQTY { get; set; }
+        public string O3DIV { get; set; }
+        public decimal O3DAY56 { get; set; }
+        public decimal O3DAY55 { get; set; }
+        public decimal O3DAY54 { get; set; }
+        public decimal O3DAY53 { get; set; }
+        public decimal O3DAY52 { get; set; }
+        public decimal O3DAY51 { get; set; }
+        public decimal O3DAY50 { get; set; }
+        public decimal O3DAY49 { get; set; }
+        public decimal O3DAY48 { get; set; }
+        public decimal O3DAY47 { get; set; }
+        public decimal O3DAY46 { get; set; }
+        public decimal O3DAY45 { get; set; }
+        public decimal O3DAY44 { get; set; }
+        public decimal O3DAY43 { get; set; }
+        public decimal O3DAY42 { get; set; }
+        public decimal O3DAY41 { get; set; }
+        public decimal O3DAY40 { get; set; }
+        public decimal O3DAY39 { get; set; }
+        public decimal O3DAY38 { get; set; }
+        public decimal O3DAY37 { get; set; }
+        public decimal O3DAY36 { get; set; }
+        public decimal O3DAY35 { get; set; }
+        public decimal O3DAY34 { get; set; }
+        public decimal O3DAY33 { get; set; }
+        public decimal O3DAY32 { get; set; }
+        public decimal O3DAY31 { get; set; }
+        public decimal O3DAY30 { get; set; }
+        public decimal O3DAY29 { get; set; }
+        public decimal O3DAY28 { get; set; }
+        public decimal O3DAY27 { get; set; }
+        public decimal O3DAY26 { get; set; }
+        public decimal O3DAY25 { get; set; }
+        public decimal O3DAY24 { get; set; }
+        public decimal O3DAY23 { get; set; }
+        public decimal O3DAY22 { get; set; }
+        public decimal O3DAY21 { get; set; }
+        public decimal O3DAY20 { get; set; }
+        public decimal O3DAY19 { get; set; }
+        public decimal O3DAY18 { get; set; }
+        public decimal O3DAY17 { get; set; }
+        public decimal O3DAY16 { get; set; }
+        public decimal O3DAY15 { get; set; }
+        public decimal O3DAY14 { get; set; }
+        public decimal O3DAY13 { get; set; }
+        public decimal O3DAY12 { get; set; }
+        public decimal O3DAY11 { get; set; }
+        public decimal O3DAY10 { get; set; }
+        public decimal O3DAY09 { get; set; }
+        public decimal O3DAY08 { get; set; }
+        public decimal O3DAY07 { get; set; }
+        public decimal O3DAY06 { get; set; }
+        public decimal O3DAY05 { get; set; }
+        public decimal O3DAY04 { get; set; }
+        public decimal O3DAY03 { get; set; }
+        public decimal O3DAY02 { get; set; }
+        public decimal O3DAY01 { get; set; }
+    }
+}
