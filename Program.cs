@@ -16,7 +16,7 @@ builder.Services.AddQuartz(q =>
         .WithIdentity("DataRepo-trigger")
        //.WithCronSchedule("40 56 17 * * ?"));
     ////Actual Record of Final Records
-    .WithCronSchedule("35 55 07 * * ?"));
+    .WithCronSchedule("52 19 17 * * ?"));
 
 });
 

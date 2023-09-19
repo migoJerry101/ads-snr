@@ -127,20 +127,34 @@ namespace ads.Repository
                         }
                         else
                         {
-                            var result3 = inventorys.Where(x=> x.INUMBR2 == item.INUMBR);
-
-                            foreach (var item2 in result2)
+                            var result3 = inventorys.Where(x => x.INUMBR2 == item.INUMBR);
+                            if (result3.Any())
                             {
-                                Olde = new DataRows
+                                foreach (var item2 in result3)
                                 {
-                                    Sku = item.INUMBR,
-                                    Clubs = item2.CSSTOR,
-                                    Sales = 0,
-                                    Date = start,
-                                };
+                                    Olde = new DataRows
+                                    {
+                                        Sku = item.INUMBR,
+                                        Clubs = item2.ISTORE,
+                                        Sales = 0,
+                                        Date = start,
+                                    };
 
-                                listOfOledb.Add(Olde);
+                                    listOfOledb.Add(Olde);
+                                }
                             }
+                            //else
+                            //{
+                            //    Olde = new DataRows
+                            //    {
+                            //        Sku = item.INUMBR,
+                            //        Clubs = "No Clubs",
+                            //        Sales = 0,
+                            //        Date = start,
+                            //    };
+
+                            //    listOfOledb.Add(Olde);
+                            //}
                         }
                     }
 
@@ -200,7 +214,7 @@ namespace ads.Repository
                     StartLog = startLogs,
                     EndLog = endLogs,
                     Action = "Error",
-                    Message = "Sales : "+e.Message+"",
+                    Message = "Sales : " + e.Message + "",
                     Record_Date = start
                 });
 
@@ -286,6 +300,18 @@ namespace ads.Repository
                                 }
                             }
                         }
+                        //else
+                        //{
+                        //    Olde = new Inventory
+                        //    {
+                        //        Sku = item.INUMBR,
+                        //        Clubs = "No Clubs",
+                        //        Inv = 0,
+                        //        Date = start,
+                        //    };
+
+                        //    ListInventory.Add(Olde);
+                        //}
                     }
 
                     Console.WriteLine(ListInventory);
@@ -341,7 +367,7 @@ namespace ads.Repository
             }
             catch (Exception e)
             {
-               // string TotalRows = TotalInventory(start, end);
+                // string TotalRows = TotalInventory(start, end);
 
                 DateTime endLogs = DateTime.Now;
                 Log.Add(new Logging
@@ -349,7 +375,7 @@ namespace ads.Repository
                     StartLog = startLogs,
                     EndLog = endLogs,
                     Action = "Error",
-                    Message = "Inventory : "+e.Message+" ",
+                    Message = "Inventory : " + e.Message + " ",
                     Record_Date = start
                 });
 
@@ -359,7 +385,7 @@ namespace ads.Repository
             }
 
 
-           
+
         }
         //Insert Logs
         public void InsertLogs(List<Logging> logging)
@@ -452,7 +478,7 @@ namespace ads.Repository
             List<TotalADS> returnlist = new List<TotalADS>();
 
             //Start Logs
-            List <Logging> Log = new List<Logging>();
+            List<Logging> Log = new List<Logging>();
 
             DateTime startLogs = DateTime.Now;
 
@@ -461,9 +487,9 @@ namespace ads.Repository
             DateTime currentDate = DateTime.Now;
 
             string startDate = currentDate.ToString("yyMMdd");
-           // string startDate = "230913";
+            //string startDate = "230913";
 
-           //Date Ranges of Computation of 56 days
+            //Date Ranges of Computation of 56 days
             string dateListString = string.Join(",", DateCompute(startDate).Select(date => $"'{date}'"));
             dateListString = dateListString.TrimEnd(',');
 
@@ -484,7 +510,7 @@ namespace ads.Repository
             }
             return returnlist;
         }
-        
+
         public async Task<List<TotalADS>> GetTotalApdAsync(List<Inventory> listInventoryResult, List<DataRows> listSalesResult, string dateListString)
         {
             //Start Logs
@@ -677,7 +703,7 @@ namespace ads.Repository
             }
         }
 
-        public async Task<List<TotalADS>> GetTotalSkuAndClubsAsync(List<Inventory> listInv, List<DataRows> listDataResult, string dateListString)
+        public async Task<List<TotalADS>> GetTotalSkuAndClubsAsync(List<Inventory> listInventoryResult, List<DataRows> listSalesResult, string dateListString)
         {
             //Start Logs
             List<Logging> Log = new List<Logging>();
@@ -694,7 +720,7 @@ namespace ads.Repository
 
             List<TotalADS> totalAPDs = new List<TotalADS>();
 
-            try 
+            try
             {
                 using (OledbCon db = new OledbCon())
                 {
@@ -704,8 +730,8 @@ namespace ads.Repository
 
                     //var listDataResult = await ListData(dateListString, db);
 
-                    var joinDataInv = listDataResult.Join(
-                         listInv,
+                    var joinDataInv = listSalesResult.Join(
+                         listInventoryResult,
                          x => x.Sku,
                          y => y.Sku,
                          (x, y) => new DataRows
@@ -880,30 +906,46 @@ namespace ads.Repository
         {
             List<Inventory> list = new List<Inventory>();
 
-            string query = "select * from tbl_inv where Date in (" + dateListString + ") ";
-            //string query = "select * from tbl_inv where Date = '230911' ";
+            var pageSize = 400000;
 
-            using (SqlCommand cmd = new SqlCommand(query, db.Con))
+            // Get the total count of rows for your date filter
+            var rowCount = await Countdata(dateListString, db);
+
+            // Calculate the total number of pages
+            var totalPages = (int)Math.Ceiling((double)rowCount / pageSize);
+            for (int pageNumber = 0; pageNumber < totalPages; pageNumber++)
             {
-                cmd.CommandTimeout = 18000;
-                // Implement of Pagination per Clubs
-                using (var reader = await cmd.ExecuteReaderAsync())
-                {
-                    while (await reader.ReadAsync())
-                    {
-                        Inventory Olde = new Inventory
-                        {
-                            Sku = reader["Sku"].ToString(),
-                            Inv = Convert.ToDecimal(reader["Inventory"].ToString()),
-                            Date = reader["Date"].ToString(),
-                        };
+                int offset = pageSize * pageNumber;
 
-                        Console.WriteLine(reader["Date"].ToString());
-                        list.Add(Olde);
+                //string query = "select * from tbl_inv where Date in (" + dateListString + ") ";   
+                string query = "select * from tbl_inv where Date in (" + dateListString + ") " +
+                        "ORDER BY Date OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY ";
+                //string query = "select * from tbl_inv where Date = '230911' ";
+
+                using (SqlCommand cmd = new SqlCommand(query, db.Con))
+                {
+                    cmd.Parameters.AddWithValue("@Offset", offset);
+                    cmd.Parameters.AddWithValue("@PageSize", pageSize);
+                    cmd.CommandTimeout = 18000;
+
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            Inventory Olde = new Inventory
+                            {
+                                Clubs = reader["Clubs"].ToString(),
+                                Sku = reader["Sku"].ToString(),
+                                Inv = Convert.ToDecimal(reader["Inventory"].ToString()),
+                                Date = reader["Date"].ToString(),
+                            };
+
+                            Console.WriteLine(reader["Date"].ToString());
+                            list.Add(Olde);
+                        }
                     }
                 }
             }
-
             return list.ToList();
         }
         //list Data
@@ -1048,7 +1090,7 @@ namespace ads.Repository
         }
 
         //ListCSHDET - List of Sales GroupBy SKu,,store,Date
-        public async Task<List<GeneralModel>> ListOfSales(OledbCon db,string start, string end)
+        public async Task<List<GeneralModel>> ListOfSales(OledbCon db, string start, string end)
         {
             List<GeneralModel> list = new List<GeneralModel>();
 
@@ -1084,7 +1126,7 @@ namespace ads.Repository
         {
             List<GeneralModel> list = new List<GeneralModel>();
 
-             string query = "select * from Openquery([snr], 'SELECT INUMBR ,Max(ISTORE) ISTORE , CASE WHEN SUM(IBHAND) < 0 THEN 0 ELSE SUM(IBHAND) END AS IBHAND from MMJDALIB.INVBAL GROUP BY INUMBR')";
+            string query = "select * from Openquery([snr], 'SELECT INUMBR ,Max(ISTORE) ISTORE , CASE WHEN SUM(IBHAND) < 0 THEN 0 ELSE SUM(IBHAND) END AS IBHAND from MMJDALIB.INVBAL GROUP BY INUMBR')";
             //string query = "select * from Openquery([snr], 'SELECT INUMBR ,ISTORE, CASE WHEN MAX(IBHAND) < 0 THEN 0 ELSE MAX(IBHAND) END AS IBHAND from MMJDALIB.INVBAL GROUP BY INUMBR ,ISTORE')";
             //string query = "select * from Openquery([snr], 'SELECT MST.INUMBR, MAX(BAL.ISTORE) ISTORE, SUM(BAL.IBHAND) IBHAND from MMJDALIB.INVMST as MST " +
             //    "INNER JOIN MMJDALIB.INVBAL as BAL on MST.INUMBR = BAL.INUMBR " +
