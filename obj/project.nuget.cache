@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "xDGYDVrt1Up+jJZPKwn5bdWwDqXRNvqERovs4i3G/GvzHzhsjPwtfMq5s/DnMMzRWvyg3YzIvXptMldpawKgJQ==",
+  "dgSpecHash": "uCApyGW07nvYHH28jz3NAAj8Gb5TGnM8Jta6jBfLv72XYR7RrKx3kdQiQF2zgAReYMXPZ8u9UWMNi92Es5TShg==",
   "success": true,
-  "projectFilePath": "C:\\Users\\ralcaraz\\Videos\\ADS\\ads - 09112023\\ads.csproj",
+  "projectFilePath": "C:\\Users\\ralcaraz\\Videos\\ADS\\Ads-SNR\\ads.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\ralcaraz\\.nuget\\packages\\azure.core\\1.25.0\\azure.core.1.25.0.nupkg.sha512",
     "C:\\Users\\ralcaraz\\.nuget\\packages\\azure.identity\\1.7.0\\azure.identity.1.7.0.nupkg.sha512",

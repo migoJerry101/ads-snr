@@ -1,4 +1,4 @@
-﻿namespace ads.Models
+﻿namespace ads.Models.Data
 {
     public class TotalDiv
     {

@@ -14,10 +14,10 @@ using System.IO;
 using Newtonsoft.Json;
 using ads.Models.Data;
 using ads.Data;
-using ads.Models;
 using Dapper;
+using static System.Net.WebRequestMethods;
 //Final Code
-namespace WMS_API.Repository
+namespace ads.Repository
 {
     public class DataRepo : IJob
     {
@@ -29,27 +29,21 @@ namespace WMS_API.Repository
 
             try
             {
-                //string date1 = DateTime.Now.ToString("yyMMdd");
-                //string startDate = "230701";
                 // Get the current date
                 DateTime currentDate = DateTime.Now;
 
                 // Subtract one day
                 DateTime previousDate = currentDate.AddDays(-1);
 
-                // Format the dates as strings in "yyMMdd" format
-                //string startDate = previousDate.ToString("yyMMdd");
-                //string startDate = "230705";
-
-                //////Actual Record or Final Setup
+                ////////Actual Record or Final Setup
                 string startDate = previousDate.ToString("yyMMdd");
                 string endDate = previousDate.ToString("yyMMdd");
 
-                //string startDate = "230910";
-                //string endDate = "230910";
+                //string startDate = "230916";
+                //string endDate = "230916";
 
-                //await GetInventoryAsync(startDate, endDate);
-                await GetDataAsync(startDate, endDate);
+                await GetInventoryAsync(startDate, endDate);
+                await GetSalesAsync(startDate, endDate);
 
                 await GetComputation();
             }
@@ -61,8 +55,8 @@ namespace WMS_API.Repository
 
             //return await Task.CompletedTask;
         }
-        //Get Data
-        public async Task<List<DataRows>> GetDataAsync(string start, string end)
+        //Get Sales
+        public async Task<List<DataRows>> GetSalesAsync(string start, string end)
         {
             List<DataRows> transformedData = new List<DataRows>();
 
@@ -76,115 +70,146 @@ namespace WMS_API.Repository
 
             DateTime startLogs = DateTime.Now;
 
-            //OleDb Select Query
-            using (OledbCon db = new OledbCon())
+            try
             {
-                await db.OpenAsync();
 
-                //string oledb = "SELECT * FROM OPENQUERY([snr], 'SELECT MAX(STR.STRNUM) STRNUM, MAX(MST.INUMBR) INUMBR, " +
-                //    //"CASE WHEN MAX(BAL.IBHAND) < 0 THEN 0 ELSE MAX(BAL.IBHAND) END AS IBHAND, " +
-                //    "SUM(CS.CSQTY) CSQTY, MAX(CS.CSDATE) CSDATE " +
-                //    "FROM MMJDALIB.CSHDET AS CS " +
-                //    //"INNER JOIN MMJDALIB.INVBAL AS BAL ON BAL.INUMBR = CS.CSSKU AND BAL.ISTORE = CS.CSSTOR " +
-                //    "INNER JOIN MMJDALIB.TBLSTR AS STR ON STR.STRNUM = CS.CSSTOR " +
-                //    "INNER JOIN MMJDALIB.INVMST AS MST ON MST.INUMBR = CS.CSSKU " +
-                //    "WHERE CS.CSDATE BETWEEN ''" + start + "'' AND ''" + end + "'' " +
-                //    "GROUP BY STR.STRNUM,MST.INUMBR, CS.CSDATE order by CS.CSDATE " +
-                //    "')";
-                ////"fetch first 10000 rows only')";
-
-                //using (SqlCommand cmd = new SqlCommand(oledb, db.Con))
-                //{
-                //    // Increase the command timeout value (5hrs) to a higher value
-                //    cmd.CommandTimeout = 18000;
-
-                //    using (var reader = await cmd.ExecuteReaderAsync())
-                //    {
-                //        while (await reader.ReadAsync())
-                //        {
-                //            DataRows Olde = new DataRows
-                //            {
-                //                Clubs = reader["STRNUM"].ToString(),
-                //                Sku = reader["INUMBR"].ToString(),
-                //                //Inventory = Convert.ToDecimal(reader["IBHAND"].ToString()),
-                //                Sales = Convert.ToDecimal(reader["CSQTY"].ToString()),
-                //                Date = reader["CSDATE"].ToString(),
-                //            };
-
-                //            listOfOledb.Add(Olde);
-                //        }
-                //    }
-                //}
-                //Console.WriteLine(listOfOledb);
-
-
-                var INVSMST = await ListINVMST(db);
-                var CSHDET = await ListCSHDET(db, start, end);
-
-                var dicInv = CSHDET.ToDictionary(x => x.CSSKU, y => new { y.CSQTY, y.CSDATE, y.CSSTOR });
-
-                foreach (var item in INVSMST)
+                //OleDb Select Query
+                using (OledbCon db = new OledbCon())
                 {
-                    var hasSales = dicInv.TryGetValue(item.INUMBR, out var sales);
+                    await db.OpenAsync();
 
-                    DataRows Olde = new DataRows
+                    //var groupedCSHDET = CSHDET.GroupBy(x => x.CSSKU).ToDictionary(group => group.Key, group => group.ToList());
+                    ////var dicInv = CSHDET.ToDictionary(x => x.CSSKU, y => new { y.CSQTY, y.CSDATE, y.CSSTOR });
+
+                    //foreach (var item in INVSMST)
+                    //{
+                    //    if (groupedCSHDET.TryGetValue(item.INUMBR, out var salesList))
+                    //    {
+                    //        DataRows Olde = new DataRows
+                    //        {
+                    //            Clubs = item.CSSTOR,
+                    //            Sku = item.INUMBR,
+                    //            Sales = salesList.Sum(sales => sales.CSQTY),
+                    //            Date = salesList.First().CSDATE, // Assuming you want the date from the first matching record
+                    //        };
+
+                    //        listOfOledb.Add(Olde);
+                    //    }
+                    //}
+
+                    var inventorys = await ListIventory(db);
+                    var skus = await ListOfAllSKu(db);
+                    var listOfSales = await ListOfSales(db, start, end);
+
+                    foreach (var item in skus)
                     {
-                        Clubs = item.CSSTOR,
-                        Sku = item.INUMBR,
-                        Sales = sales != null ? sales.CSQTY : 0,
-                        Date = sales?.CSDATE,
-                    };
+                        var DATE = "";
+                        DataRows Olde;
 
-                    listOfOledb.Add(Olde);
-                }
+                        var result2 = listOfSales.Where(x => x.CSSKU == item.INUMBR);
 
-                //Bluk insert in tbl_Data table
-                using (var transaction = db.Con.BeginTransaction())
-                {
-                    using (var bulkCopy = new SqlBulkCopy(db.Con, SqlBulkCopyOptions.Default, transaction))
-                    {
-                        bulkCopy.DestinationTableName = "tbl_data";
-                        bulkCopy.BatchSize = 1000;
-
-                        var dataTable = new DataTable();
-                        dataTable.Columns.Add("Id", typeof(int));
-                        dataTable.Columns.Add("Clubs", typeof(string));
-                        dataTable.Columns.Add("Sku", typeof(string));
-                        //dataTable.Columns.Add("Inventory", typeof(decimal));
-                        dataTable.Columns.Add("Sales", typeof(decimal));
-                        dataTable.Columns.Add("Date", typeof(string));
-
-                        foreach (var rowData in listOfOledb)
+                        if (result2.Any())
                         {
-                            var row = dataTable.NewRow();
-                            row["Clubs"] = rowData.Clubs;
-                            row["Sku"] = rowData.Sku;
-                            //row["Inventory"] = rowData.Inventory;
-                            row["Sales"] = rowData.Sales;
-                            row["Date"] = rowData.Date;
-                            dataTable.Rows.Add(row);
+                            foreach (var item2 in result2)
+                            {
+                                DATE = item2.CSDATE;
+
+                                Olde = new DataRows
+                                {
+                                    Sku = item.INUMBR,
+                                    Clubs = item2.CSSTOR,
+                                    Sales = item.CSQTY,
+                                    Date = item2.CSDATE,
+                                };
+
+                                listOfOledb.Add(Olde);
+                            }
                         }
-                        await bulkCopy.WriteToServerAsync(dataTable);
+                        else
+                        {
+                            var result3 = inventorys.Where(x=> x.INUMBR2 == item.INUMBR);
+
+                            foreach (var item2 in result2)
+                            {
+                                Olde = new DataRows
+                                {
+                                    Sku = item.INUMBR,
+                                    Clubs = item2.CSSTOR,
+                                    Sales = 0,
+                                    Date = start,
+                                };
+
+                                listOfOledb.Add(Olde);
+                            }
+                        }
                     }
 
-                    transaction.Commit();
+                    //Bluk insert in tbl_Data table
+                    using (var transaction = db.Con.BeginTransaction())
+                    {
+                        using (var bulkCopy = new SqlBulkCopy(db.Con, SqlBulkCopyOptions.Default, transaction))
+                        {
+                            bulkCopy.DestinationTableName = "tbl_data";
+                            bulkCopy.BatchSize = 1000;
+
+                            var dataTable = new DataTable();
+                            dataTable.Columns.Add("Id", typeof(int));
+                            dataTable.Columns.Add("Clubs", typeof(string));
+                            dataTable.Columns.Add("Sku", typeof(string));
+                            //dataTable.Columns.Add("Inventory", typeof(decimal));
+                            dataTable.Columns.Add("Sales", typeof(decimal));
+                            dataTable.Columns.Add("Date", typeof(string));
+
+                            foreach (var rowData in listOfOledb)
+                            {
+                                var row = dataTable.NewRow();
+                                row["Clubs"] = rowData.Clubs;
+                                row["Sku"] = rowData.Sku;
+                                //row["Inventory"] = rowData.Inventory;
+                                row["Sales"] = rowData.Sales;
+                                row["Date"] = rowData.Date;
+                                dataTable.Rows.Add(row);
+                            }
+                            await bulkCopy.WriteToServerAsync(dataTable);
+                        }
+
+                        transaction.Commit();
+                    }
                 }
+
+                var TotalRows = TotalSales(start, end);
+                DateTime endLogs = DateTime.Now;
+                Log.Add(new Logging
+                {
+                    StartLog = startLogs,
+                    EndLog = endLogs,
+                    Action = "Sales",
+                    Message = "Total Rows Inserted : " + TotalRows + "",
+                    Record_Date = start
+                });
+
+                InsertLogs(Log);
+
+                return listOfOledb;
+            }
+            catch (Exception e)
+            {
+                DateTime endLogs = DateTime.Now;
+                Log.Add(new Logging
+                {
+                    StartLog = startLogs,
+                    EndLog = endLogs,
+                    Action = "Error",
+                    Message = "Sales : "+e.Message+"",
+                    Record_Date = start
+                });
+
+                InsertLogs(Log);
+
+                return listOfOledb;
             }
 
-            var TotalRows = TotalSales(start, end);
-            DateTime endLogs = DateTime.Now;
-            Log.Add(new Logging
-            {
-                StartLog = startLogs,
-                EndLog = endLogs,
-                Action = "Sales",
-                Message = "Total Rows Inserted : " + TotalRows + "",
-                Record_Date = start
-            });
 
-            InsertLogs(Log);
-
-            return listOfOledb;
         }
         //Get Inventory
         public async Task<List<Inventory>> GetInventoryAsync(string start, string end)
@@ -199,148 +224,142 @@ namespace WMS_API.Repository
 
             DateTime startLogs = DateTime.Now;
 
-
-            //OleDb Select Query Invetory
-            using (OledbCon db = new OledbCon())
+            try
             {
-                await db.OpenAsync(); // Open the connection asynchronously
-
-                //string mainQuery = "SELECT MAX(CS.CSDATE) CSDATE, MAX(BAL.INUMBR) INUMBR, CASE WHEN MAX(BAL.IBHAND) < 0 THEN 0 ELSE MAX(BAL.IBHAND) END AS IBHAND " +
-                //    "FROM MMJDALIB.INVBAL as BAL INNER JOIN MMJDALIB.CSHDET AS CS ON CS.CSSKU = BAL.INUMBR " +
-                //    "WHERE CS.CSDATE BETWEEN ''" + start + "'' AND ''" + end + "'' " +
-                //    "GROUP BY BAL.INUMBR, CS.CSDATE order by CS.CSDATE";
-
-                //string openQuery = $"SELECT * FROM OPENQUERY([snr], '{mainQuery}')";
-                ////string openQuery = $"SELECT * FROM OPENQUERY([snr-uat], '{mainQuery}')";
-
-                //using (SqlCommand cmd = new SqlCommand(openQuery, db.Con))
-                //{
-                //    // Increase the command timeout value (5hrs) to a higher value
-                //    cmd.CommandTimeout = 18000;
-
-                //    using (SqlDataReader reader = await cmd.ExecuteReaderAsync())
-                //    {
-                //        while (await reader.ReadAsync())
-                //        {
-                //            Inventory item = new Inventory
-                //            {
-                //                Sku = reader["INUMBR"].ToString(),
-                //                Inv = Convert.ToDecimal(reader["IBHAND"].ToString()),
-                //                Date = reader["CSDATE"].ToString(),
-                //            };
-
-                //            ListInventory.Add(item);
-                //        }
-                //    }
-                //}
-
-                var INVSMST = await ListINVMST(db);
-                var CSHDET = await ListCSHDET(db, start, end);
-                var INVBAL = await ListINVBAL(db);
-
-                foreach (var item in INVSMST)
+                //OleDb Select Query Invetory
+                using (OledbCon db = new OledbCon())
                 {
-                    var DATE = "";
+                    await db.OpenAsync(); // Open the connection asynchronously
 
-                    Inventory Olde;
+                    //Implement for checking
+                    //var TBLSTR = await ListOfAllStore(db);
+                    var INVSMST = await ListOfAllSKu(db);
+                    var CSHDET = await ListOfSales(db, start, end);
+                    var INVBAL = await ListIventory(db);
 
-                    var result = INVBAL.Where(x => x.INUMBR2 == item.INUMBR);
+                    //var store = TBLSTR.ToDictionary(x => x.STRNUM);
 
-                    if (result.Any())
+                    foreach (var item in INVSMST)
                     {
-                        foreach (var item2 in result)
+                        var DATE = "";
+
+                        Inventory Olde;
+
+                        var result = INVBAL.Where(x => x.INUMBR2 == item.INUMBR);
+
+                        //store.TryGetValue(item2.INUMBR2);
+
+                        if (result.Any())
                         {
-                            var result2 = CSHDET.Where(x => x.CSSKU == item2.INUMBR2);
-
-                            if (result2.Any())
+                            foreach (var item2 in result)
                             {
-                                foreach (var item3 in result2)
-                                {
-                                    DATE = item2.CSDATE;
+                                var result2 = CSHDET.Where(x => x.CSSKU == item2.INUMBR2);
 
+                                if (result2.Any())
+                                {
+                                    foreach (var item3 in result2)
+                                    {
+                                        DATE = item2.CSDATE;
+
+                                        Olde = new Inventory
+                                        {
+                                            Sku = item.INUMBR,
+                                            Clubs = item3.CSSTOR,
+                                            Inv = item2.IBHAND,
+                                            Date = item3.CSDATE,
+                                        };
+
+                                        ListInventory.Add(Olde);
+                                    }
+                                }
+                                else
+                                {
                                     Olde = new Inventory
                                     {
                                         Sku = item.INUMBR,
+                                        Clubs = item2.ISTORE,
                                         Inv = item2.IBHAND,
-                                        Date = item3.CSDATE,
+                                        Date = start,
                                     };
 
                                     ListInventory.Add(Olde);
                                 }
                             }
-                            else
+                        }
+                    }
+
+                    Console.WriteLine(ListInventory);
+
+                    //Bluk insert in tbl_Data table
+                    using (var transaction = db.Con.BeginTransaction())
+                    {
+                        using (var bulkCopy = new SqlBulkCopy(db.Con, SqlBulkCopyOptions.Default, transaction))
+                        {
+                            bulkCopy.DestinationTableName = "tbl_inv";
+                            bulkCopy.BatchSize = 1000;
+
+                            var dataTable = new DataTable();
+                            dataTable.Columns.Add("Id", typeof(int));
+                            dataTable.Columns.Add("Date", typeof(string));
+                            dataTable.Columns.Add("Sku", typeof(string));
+                            dataTable.Columns.Add("Inventory", typeof(decimal));
+                            dataTable.Columns.Add("Clubs", typeof(string));
+
+                            foreach (var rawData in ListInventory)
                             {
-                                Olde = new Inventory
-                                {
-                                    Sku = item.INUMBR,
-                                    Inv = item2.IBHAND,
-                                    Date = start,
-                                };
+                                var row = dataTable.NewRow();
+                                row["Date"] = rawData.Date;
+                                row["Sku"] = rawData.Sku;
+                                row["Inventory"] = rawData.Inv;
+                                row["Clubs"] = rawData.Clubs;
+                                dataTable.Rows.Add(row);
 
-                                ListInventory.Add(Olde);
                             }
+                            await bulkCopy.WriteToServerAsync(dataTable);
                         }
-                    }
-                    else
-                    {
-                        Olde = new Inventory
-                        {
-                            Sku = item.INUMBR,
-                            Inv = 0,
-                            Date = start,
-                        };
 
-                        ListInventory.Add(Olde);
+                        transaction.Commit();
                     }
+
                 }
+                string TotalRows = TotalInventory(start, end);
 
-                Console.WriteLine(ListInventory);
-
-                //Bluk insert in tbl_Data table
-                using (var transaction = db.Con.BeginTransaction())
+                DateTime endLogs = DateTime.Now;
+                Log.Add(new Logging
                 {
-                    using (var bulkCopy = new SqlBulkCopy(db.Con, SqlBulkCopyOptions.Default, transaction))
-                    {
-                        bulkCopy.DestinationTableName = "tbl_inv";
-                        bulkCopy.BatchSize = 1000;
+                    StartLog = startLogs,
+                    EndLog = endLogs,
+                    Action = "Inventory",
+                    Message = "Total Rows Inserted : " + TotalRows + "",
+                    Record_Date = start
+                });
 
-                        var dataTable = new DataTable();
-                        dataTable.Columns.Add("Id", typeof(int));
-                        dataTable.Columns.Add("Date", typeof(string));
-                        dataTable.Columns.Add("Sku", typeof(string));
-                        dataTable.Columns.Add("Inventory", typeof(decimal));
+                InsertLogs(Log);
 
-                        foreach (var rawData in ListInventory)
-                        {
-                            var row = dataTable.NewRow();
-                            row["Date"] = rawData.Date;
-                            row["Sku"] = rawData.Sku;
-                            row["Inventory"] = rawData.Inv;
-                            dataTable.Rows.Add(row);
-
-                        }
-                        await bulkCopy.WriteToServerAsync(dataTable);
-                    }
-
-                    transaction.Commit();
-                }
+                return ListCsDate;
 
             }
-            string TotalRows = TotalInventory(start, end);
-
-            DateTime endLogs = DateTime.Now;
-            Log.Add(new Logging
+            catch (Exception e)
             {
-                StartLog = startLogs,
-                EndLog = endLogs,
-                Action = "Inventory",
-                Message = "Total Rows Inserted : " + TotalRows + "",
-                Record_Date = start
-            });
+               // string TotalRows = TotalInventory(start, end);
 
-            InsertLogs(Log);
+                DateTime endLogs = DateTime.Now;
+                Log.Add(new Logging
+                {
+                    StartLog = startLogs,
+                    EndLog = endLogs,
+                    Action = "Error",
+                    Message = "Inventory : "+e.Message+" ",
+                    Record_Date = start
+                });
 
-            return ListCsDate;
+                InsertLogs(Log);
+
+                return ListCsDate;
+            }
+
+
+           
         }
         //Insert Logs
         public void InsertLogs(List<Logging> logging)
@@ -397,7 +416,6 @@ namespace WMS_API.Repository
                         }
                     }
                 }
-
             }
 
             return totalsales.ToString();
@@ -424,15 +442,14 @@ namespace WMS_API.Repository
                         }
                     }
                 }
-
             }
 
             return totalsales;
         }
 
-        public async Task<List<TotalAPD>> GetComputation()
+        public async Task<List<TotalADS>> GetComputation()
         {
-            List<TotalAPD> returnlist = new List<TotalAPD>();
+            List<TotalADS> returnlist = new List<TotalADS>();
 
             //Start Logs
             List <Logging> Log = new List<Logging>();
@@ -444,8 +461,9 @@ namespace WMS_API.Repository
             DateTime currentDate = DateTime.Now;
 
             string startDate = currentDate.ToString("yyMMdd");
-            //string startDate = "230908";
+           // string startDate = "230913";
 
+           //Date Ranges of Computation of 56 days
             string dateListString = string.Join(",", DateCompute(startDate).Select(date => $"'{date}'"));
             dateListString = dateListString.TrimEnd(',');
 
@@ -453,19 +471,21 @@ namespace WMS_API.Repository
             {
                 await db.OpenAsync();
 
-                var listInv = await ListInv(dateListString, db);
+                //list of Inventory within 56 days in Local DB
+                var listInventoryResult = await ListInv(dateListString, db);
+                //list of Sales within 56 days in Local DB
+                var listSalesResult = await ListSales(dateListString, db);
 
-                var listDataResult = await ListData(dateListString, db);
-
-                await GetTotalApdAsync(listInv, listDataResult, dateListString);
-
-                await GetTotalSkuAndClubsAsync(listInv, listDataResult, dateListString);
+                //Per SKU
+                await GetTotalApdAsync(listInventoryResult, listSalesResult, dateListString);
+                //Per Store
+                await GetTotalSkuAndClubsAsync(listInventoryResult, listSalesResult, dateListString);
 
             }
             return returnlist;
         }
         
-        public async Task<List<TotalAPD>> GetTotalApdAsync(List<Inventory> listInv, List<DataRows> listDataResult, string dateListString)
+        public async Task<List<TotalADS>> GetTotalApdAsync(List<Inventory> listInventoryResult, List<DataRows> listSalesResult, string dateListString)
         {
             //Start Logs
             List<Logging> Log = new List<Logging>();
@@ -474,167 +494,180 @@ namespace WMS_API.Repository
 
             List<DataRows> listData = new List<DataRows>();
 
-            //DateTime currentDate = DateTime.Now;
-
-            ////string startDate = currentDate.ToString("yyMMdd");
-            //string startDate = "230908";
-
-
-            //string dateListString = string.Join(",", DateCompute(startDate).Select(date => $"'{date}'"));
-            //dateListString = dateListString.TrimEnd(',');
-
             string[] dateParts = dateListString.Split(',');
             string fistDatePart = dateParts.FirstOrDefault();
             string lastDatePart = dateParts.LastOrDefault();
             string firstDate = fistDatePart.Trim('\'');
             string lastDate = lastDatePart.Trim('\'');
 
-            using (OledbCon db = new OledbCon())
+            List<TotalADS> totalAPDs = new List<TotalADS>();
+
+            try
             {
-                await db.OpenAsync();
-
-                //var listInv = await ListInv(dateListString, db);
-
-                //var listDataResult = await ListData(dateListString, db);
-
-                var joinDataInv = listDataResult.Join(
-                     listInv,
-                     x => x.Sku,
-                     y => y.Sku,
-                     (x, y) => new DataRows
-                     {
-                         Clubs = x.Clubs,
-                         Sku = x.Sku,
-                         Inventory = x.Inventory,
-                         Sales = (x.Sales > 0) ? x.Sales : 0,
-                         Date = x.Date
-                     });
-
-                
-                var groupedData = joinDataInv.GroupBy(item => new { item.Sku, item.Date });
-
-                listData = groupedData.SelectMany(group => group).DistinctBy(item => new { item.Sku, item.Date }).ToList();
-
-
-                List<TotalAPD> totalAPDs = new List<TotalAPD>();
-                //Filter sku and sum of sales
-                var groupedBy = listData.GroupBy(x => x.Sku).ToDictionary(
-                                 group => group.Key,
-                                 group => group.Sum(item => item.Sales)
-                             );
-
-                List<TotalDiv> divs = new List<TotalDiv>();
-               
-                //Distinct of SKU
-                var filter = listData.Select(x => new
+                using (OledbCon db = new OledbCon())
                 {
-                    Sku = x.Sku,
-                }).Distinct().ToList();
+                    await db.OpenAsync();
 
-                foreach (var f in filter)
-                {
-                    var checkSku = listData.Where(x => x.Sku == f.Sku && x.Sales == 0 && x.Inventory == 0);
-                    var totalDiv = listData.Select(x => x.Date).Distinct().Count();
+                    //var listInv = await ListInv(dateListString, db);
 
-                    if (checkSku.Any())
+                    //var listDataResult = await ListData(dateListString, db);
+
+                    var joinDataInv = listSalesResult.Join(
+                         listInventoryResult,
+                         x => x.Sku,
+                         y => y.Sku,
+                         (x, y) => new DataRows
+                         {
+                             Clubs = x.Clubs,
+                             Sku = x.Sku,
+                             Inventory = x.Inventory,
+                             Sales = (x.Sales > 0) ? x.Sales : 0,
+                             Date = x.Date
+                         });
+
+                    //GroupBy SKU
+                    var groupedData = joinDataInv.GroupBy(item => new { item.Sku, item.Date });
+
+                    //GroupBy SKU
+                    listData = groupedData.SelectMany(group => group).DistinctBy(item => new { item.Sku, item.Date }).ToList();
+
+
+                    //Filter sku and sum of sales
+                    var groupedBy = listData.GroupBy(x => x.Sku).ToDictionary(
+                                     group => group.Key,
+                                     group => group.Sum(item => item.Sales)
+                                 );
+
+                    List<TotalDiv> divs = new List<TotalDiv>();
+
+                    //Distinct of SKU
+                    var filter = listData.Select(x => new
                     {
-                        foreach (var s in checkSku)
+                        Sku = x.Sku,
+                    }).Distinct().ToList();
+
+                    foreach (var f in filter)
+                    {
+                        var checkSku = listData.Where(x => x.Sku == f.Sku && x.Sales == 0 && x.Inventory == 0);
+                        var totalDiv = listData.Select(x => x.Date).Distinct().Count();
+
+                        if (checkSku.Any())
                         {
-                            totalDiv -= 1;
-                        }
-
-                        divs.Add(new TotalDiv { sku = f.Sku, total = totalDiv });
-                    }
-                    else
-                    {
-                        divs.Add(new TotalDiv { sku = f.Sku, total = totalDiv });
-                    }
-
-                    decimal result = 0;
-
-                    groupedBy.TryGetValue(f.Sku.ToString(), out decimal totalSales);
-
-                    if (totalSales >= long.MinValue && totalSales <= long.MaxValue)
-                    {
-                        result = (long)totalSales;
-                    }
-
-                    decimal totalAPDDecimal = 0;
-
-                    var search = divs.SingleOrDefault(x => x.sku == f.Sku);
-
-                    if (search != null)
-                    {
-                        totalAPDDecimal = Math.Round(result / totalDiv, 2);
-                        Console.WriteLine(totalAPDDecimal);
-
-                        if (totalDiv != 0)
-                        {
-                            groupedBy.TryGetValue(f.Sku.ToString(), out decimal salesOut);
-                            long totalAPD = Convert.ToInt64(totalAPDDecimal);
-                            Console.WriteLine(totalAPD);
-
-                            totalAPDs.Add(new TotalAPD
+                            foreach (var s in checkSku)
                             {
-                                Divisor = totalDiv,
-                                Sales = salesOut,
-                                Ads = totalAPD,
-                                Date = lastDate,
-                                Sku = f.Sku.ToString(),
-                                StartDate = lastDate,
-                                EndDate = firstDate
-                            });
+                                totalDiv -= 1;
+                            }
+
+                            divs.Add(new TotalDiv { sku = f.Sku, total = totalDiv });
                         }
-                    }
-                }
-
-                Console.WriteLine(totalAPDs);
-
-                //Bluk insert
-                using (var transaction = db.Con.BeginTransaction())
-                {
-                    using (var bulkCopy = new SqlBulkCopy(db.Con, SqlBulkCopyOptions.Default, transaction))
-                    {
-                        bulkCopy.DestinationTableName = "tbl_totalAds";
-                        bulkCopy.BatchSize = 1000;
-
-                        var dataTable = new DataTable();
-                        dataTable.Columns.Add("Id", typeof(int));
-                        dataTable.Columns.Add("Sku", typeof(string));
-                        dataTable.Columns.Add("Sales", typeof(decimal));
-                        //dataTable.Columns.Add("Inventory", typeof(decimal));
-                        dataTable.Columns.Add("Divisor", typeof(string));
-                        //dataTable.Columns.Add("Date", typeof(string));
-                        dataTable.Columns.Add("Ads", typeof(decimal));
-                        dataTable.Columns.Add("StartDate", typeof(string));
-                        dataTable.Columns.Add("EndDate", typeof(string));
-
-                        foreach (var rawData in totalAPDs)
+                        else
                         {
-                            var row = dataTable.NewRow();
-                            row["Sku"] = rawData.Sku;
-                            row["Sales"] = rawData.Sales;
-                            //row["Inventory"] = rawData.Inventory;
-                            row["Divisor"] = rawData.Divisor;
-                            //row["Date"] = rawData.Date;
-                            row["Ads"] = rawData.Ads;
-                            row["StartDate"] = rawData.StartDate;
-                            row["EndDate"] = rawData.EndDate;
-                            dataTable.Rows.Add(row);
+                            divs.Add(new TotalDiv { sku = f.Sku, total = totalDiv });
                         }
-                        await bulkCopy.WriteToServerAsync(dataTable);
+
+                        decimal result = 0;
+
+                        groupedBy.TryGetValue(f.Sku.ToString(), out decimal totalSales);
+
+                        if (totalSales >= long.MinValue && totalSales <= long.MaxValue)
+                        {
+                            result = (long)totalSales;
+                        }
+
+                        decimal totalAPDDecimal = 0;
+
+                        var search = divs.SingleOrDefault(x => x.sku == f.Sku);
+
+                        if (search != null)
+                        {
+                            if (totalDiv != 0)
+                            {
+
+                                totalAPDDecimal = Math.Round(result / totalDiv, 2);
+                                Console.WriteLine(totalAPDDecimal);
+
+                                groupedBy.TryGetValue(f.Sku.ToString(), out decimal salesOut);
+                                long totalAPD = Convert.ToInt64(totalAPDDecimal);
+                                Console.WriteLine(totalAPD);
+
+                                totalAPDs.Add(new TotalADS
+                                {
+                                    Divisor = totalDiv,
+                                    Sales = salesOut,
+                                    Ads = totalAPD,
+                                    Date = lastDate,
+                                    Sku = f.Sku.ToString(),
+                                    StartDate = lastDate,
+                                    EndDate = firstDate
+                                });
+                            }
+                        }
                     }
 
-                    transaction.Commit();
-                }
+                    Console.WriteLine(totalAPDs);
 
+                    //Bluk insert
+                    using (var transaction = db.Con.BeginTransaction())
+                    {
+                        using (var bulkCopy = new SqlBulkCopy(db.Con, SqlBulkCopyOptions.Default, transaction))
+                        {
+                            bulkCopy.DestinationTableName = "tbl_totalAds";
+                            bulkCopy.BatchSize = 1000;
+
+                            var dataTable = new DataTable();
+                            dataTable.Columns.Add("Id", typeof(int));
+                            dataTable.Columns.Add("Sku", typeof(string));
+                            dataTable.Columns.Add("Sales", typeof(decimal));
+                            //dataTable.Columns.Add("Inventory", typeof(decimal));
+                            dataTable.Columns.Add("Divisor", typeof(string));
+                            //dataTable.Columns.Add("Date", typeof(string));
+                            dataTable.Columns.Add("Ads", typeof(decimal));
+                            dataTable.Columns.Add("StartDate", typeof(string));
+                            dataTable.Columns.Add("EndDate", typeof(string));
+
+                            foreach (var rawData in totalAPDs)
+                            {
+                                var row = dataTable.NewRow();
+                                row["Sku"] = rawData.Sku;
+                                row["Sales"] = rawData.Sales;
+                                //row["Inventory"] = rawData.Inventory;
+                                row["Divisor"] = rawData.Divisor;
+                                //row["Date"] = rawData.Date;
+                                row["Ads"] = rawData.Ads;
+                                row["StartDate"] = rawData.StartDate;
+                                row["EndDate"] = rawData.EndDate;
+                                dataTable.Rows.Add(row);
+                            }
+                            await bulkCopy.WriteToServerAsync(dataTable);
+                        }
+
+                        transaction.Commit();
+                    }
+
+                    DateTime endLogs = DateTime.Now;
+                    Log.Add(new Logging
+                    {
+                        StartLog = startLogs,
+                        EndLog = endLogs,
+                        Action = "Total ADS",
+                        Message = "Total Sku Inserted : " + filter.Count + "",
+                        Record_Date = lastDate
+                    });
+
+                    InsertLogs(Log);
+
+                    return totalAPDs;
+                }
+            }
+            catch (Exception e)
+            {
                 DateTime endLogs = DateTime.Now;
                 Log.Add(new Logging
                 {
                     StartLog = startLogs,
                     EndLog = endLogs,
-                    Action = "Inventory",
-                    Message = "Total Sku Inserted : " + filter.Count + "",
+                    Action = "Error",
+                    Message = "Total Sku  : " + e.Message + "",
                     Record_Date = lastDate
                 });
 
@@ -644,7 +677,7 @@ namespace WMS_API.Repository
             }
         }
 
-        public async Task<List<TotalAPD>> GetTotalSkuAndClubsAsync(List<Inventory> listInv, List<DataRows> listDataResult, string dateListString)
+        public async Task<List<TotalADS>> GetTotalSkuAndClubsAsync(List<Inventory> listInv, List<DataRows> listDataResult, string dateListString)
         {
             //Start Logs
             List<Logging> Log = new List<Logging>();
@@ -653,21 +686,13 @@ namespace WMS_API.Repository
 
             List<DataRows> listData = new List<DataRows>();
 
-            //DateTime currentDate = DateTime.Now;
-
-            ////string startDate = currentDate.ToString("yyMMdd");
-            //string startDate = "230908";
-
-            //string dateListString = string.Join(",", DateCompute(startDate).Select(date => $"'{date}'"));
-            //dateListString = dateListString.TrimEnd(',');
-
             string[] dateParts = dateListString.Split(',');
             string fistDatePart = dateParts.FirstOrDefault();
             string lastDatePart = dateParts.LastOrDefault();
             string firstDate = fistDatePart.Trim('\'');
             string lastDate = lastDatePart.Trim('\'');
 
-            List<TotalAPD> totalAPDs = new List<TotalAPD>();
+            List<TotalADS> totalAPDs = new List<TotalADS>();
 
             try 
             {
@@ -751,22 +776,26 @@ namespace WMS_API.Repository
 
                         if (search != null)
                         {
-                            totalAPDDecimal = Math.Round(result / totalDiv, 2);
-                            Console.WriteLine(totalAPDDecimal);
+                            //totalAPDDecimal = Math.Round(result / totalDiv, 2);
+                            //Console.WriteLine(totalAPDDecimal);
 
                             if (totalDiv != 0)
                             {
+                                totalAPDDecimal = Math.Round(result / totalDiv, 2);
+                                Console.WriteLine(totalAPDDecimal);
+
                                 groupedBy.TryGetValue(key, out decimal salesOut);
                                 long totalAPD = Convert.ToInt64(totalAPDDecimal);
                                 Console.WriteLine(totalAPD);
 
-                                totalAPDs.Add(new TotalAPD
+                                totalAPDs.Add(new TotalADS
                                 {
                                     Divisor = totalDiv,
                                     Sales = salesOut,
                                     Ads = totalAPD,
                                     Date = lastDate,
                                     Sku = f.Sku,
+                                    Clubs = f.Clubs,
                                     StartDate = lastDate,
                                     EndDate = firstDate
                                 });
@@ -787,6 +816,7 @@ namespace WMS_API.Repository
                             var dataTable = new DataTable();
                             dataTable.Columns.Add("Id", typeof(int));
                             dataTable.Columns.Add("Sku", typeof(string));
+                            dataTable.Columns.Add("Clubs", typeof(string));
                             dataTable.Columns.Add("Sales", typeof(decimal));
                             dataTable.Columns.Add("Divisor", typeof(string));
                             dataTable.Columns.Add("Ads", typeof(decimal));
@@ -797,6 +827,7 @@ namespace WMS_API.Repository
                             {
                                 var row = dataTable.NewRow();
                                 row["Sku"] = rawData.Sku;
+                                row["Clubs"] = rawData.Clubs;
                                 row["Sales"] = rawData.Sales;
                                 row["Divisor"] = rawData.Divisor;
                                 row["Ads"] = rawData.Ads;
@@ -815,7 +846,7 @@ namespace WMS_API.Repository
                     {
                         StartLog = startLogs,
                         EndLog = endLogs,
-                        Action = "Inventory",
+                        Action = "Total ADS",
                         Message = "Total Clubs Inserted : " + filter.Count + "",
                         Record_Date = lastDate
                     });
@@ -828,21 +859,34 @@ namespace WMS_API.Repository
             catch (Exception e)
             {
                 Console.WriteLine(e.Message);
+                DateTime endLogs = DateTime.Now;
+                Log.Add(new Logging
+                {
+                    StartLog = startLogs,
+                    EndLog = endLogs,
+                    Action = "Error",
+                    Message = "Total Clubs : " + e.Message + "",
+                    Record_Date = lastDate
+                });
+
+                InsertLogs(Log);
+
                 return totalAPDs;
             }
         }
 
-        //list Inventory
+        //list Inventory 
         public async Task<List<Inventory>> ListInv(string dateListString, OledbCon db)
         {
             List<Inventory> list = new List<Inventory>();
 
             string query = "select * from tbl_inv where Date in (" + dateListString + ") ";
+            //string query = "select * from tbl_inv where Date = '230911' ";
 
             using (SqlCommand cmd = new SqlCommand(query, db.Con))
             {
                 cmd.CommandTimeout = 18000;
-
+                // Implement of Pagination per Clubs
                 using (var reader = await cmd.ExecuteReaderAsync())
                 {
                     while (await reader.ReadAsync())
@@ -863,7 +907,7 @@ namespace WMS_API.Repository
             return list.ToList();
         }
         //list Data
-        public async Task<List<DataRows>> ListData(string dateListString, OledbCon db)
+        public async Task<List<DataRows>> ListSales(string dateListString, OledbCon db)
         {
             List<DataRows> list = new List<DataRows>();
 
@@ -881,15 +925,8 @@ namespace WMS_API.Repository
 
                 string query = "select * from tbl_data where Date in (" + dateListString + ") " +
                     "ORDER BY Date OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY ";
-
-                //string query = $"SELECT data.Sku, data.Date, SUM(CASE WHEN data.Sales > 0 THEN data.Sales ELSE 0 END) AS Sales " +
-                //       $"FROM tbl_data AS data " +
-                //       $"INNER JOIN tbl_inv AS inv ON data.Sku = inv.Sku " +
-                //       $"WHERE data.Sku in ('94090', '67351', '133625', '137494') and " +
-                //       $"data.Date IN (" + dateListString + ") " +
-                //       $"GROUP BY data.Sku, data.Date " +
-                //       $"ORDER BY data.Sku " +
-                //       $"OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY";
+                //string query = "select * from tbl_data where Date = '230911' " +
+                //    "ORDER BY Date OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY ";
 
                 using (SqlCommand cmd = new SqlCommand(query, db.Con))
                 {
@@ -918,57 +955,6 @@ namespace WMS_API.Repository
             return list;
         }
 
-        //public async Task<List<DataRows>> ListData(string dateListString, OledbCon db)
-        //{
-        //    List<DataRows> list = new List<DataRows>();
-
-        //    var pageSize = 400000;
-
-        //    // Get the total count of rows for your date filter
-        //    var rowCount = await Countdata(dateListString, db);
-
-        //    // Calculate the total number of pages
-        //    var totalPages = (int)Math.Ceiling((double)rowCount / pageSize);
-
-        //    string Catalog = "ADS.Development";
-        //    string strConn = "data source='199.84.1.203';Initial Catalog=" + Catalog + ";User Id=apps_wms_dev;password=P@55w0rd;Trusted_Connection=false;MultipleActiveResultSets=true;TrustServerCertificate=True;";
-
-        //    using (var dbConnection = new SqlConnection(strConn))
-        //    {
-        //        await dbConnection.OpenAsync();
-
-        //        for (int pageNumber = 0; pageNumber < totalPages; pageNumber++)
-        //        {
-        //            int offset = pageSize * pageNumber;
-
-        //            string query = "select * from tbl_data where Date in (" + dateListString + ") " +
-        //                "ORDER BY Date OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY ";
-
-        //            //string query = "SELECT data.Sku, data.Date, SUM(CASE WHEN data.Sales > 0 THEN data.Sales ELSE 0 END) AS Sales " +
-        //            //       "FROM tbl_data AS data " +
-        //            //       "INNER JOIN tbl_inv AS inv ON data.Sku = inv.Sku " +
-        //            //       "WHERE " +
-        //            //       "data.Date IN (" + dateListString + ") " +
-        //            //       "GROUP BY data.Sku, data.Date " +
-        //            //       "ORDER BY data.Sku " +
-        //            //       "OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY";
-
-
-        //            var parameters = new
-        //            {
-        //                Offset = offset,
-        //                PageSize = pageSize
-        //            };
-
-        //            var result = await dbConnection.QueryAsync<DataRows>(query, parameters, commandTimeout: 18000);
-        //            list.AddRange(result);
-
-        //        }
-
-        //    }
-        //    return list;
-        //}
-
         //TotalCount of Data
         public async Task<int> Countdata(string dateListString, OledbCon db)
         {
@@ -992,6 +978,7 @@ namespace WMS_API.Repository
             return totalCount;
         }
 
+        //List of Date within 56 days 
         public List<string> DateCompute(string startDateStr)
         {
             List<string> listDate = new List<string>();
@@ -1017,7 +1004,6 @@ namespace WMS_API.Repository
 
             return listDate.ToList();
         }
-
         public List<DateTime> GetDatesInRange(DateTime startDate, DateTime endDate)
         {
             List<DateTime> datesInRange = new List<DateTime>();
@@ -1030,12 +1016,15 @@ namespace WMS_API.Repository
             return datesInRange;
         }
 
-        //ListINVMST
-        public async Task<List<GeneralModel>> ListINVMST(OledbCon db)
+        //ListINVMST - List of All SKU Filter ISTYPE = ''01'' AND IDSCCD IN (''A'',''I'',''D'',''P'') AND IATRB1 IN (''L'',''I'',''LI'')
+        //ISTYPE - Type of SKU
+        //IDSCCD - Status of SKU
+        //IATRB1 - Attribute of SKU
+        public async Task<List<GeneralModel>> ListOfAllSKu(OledbCon db)
         {
             List<GeneralModel> list = new List<GeneralModel>();
 
-            string query = "select * from Openquery([snr], 'SELECT * from MMJDALIB.INVMST WHERE ISTYPE = ''01'' AND IDSCCD IN (''A'',''I'',''D'',''P'') AND IATRB1 IN (''L'',''I'',''LI'')')";
+            string query = "select * from Openquery([snr], 'SELECT INUMBR from MMJDALIB.INVMST WHERE ISTYPE = ''01'' AND IDSCCD IN (''A'',''I'',''D'',''P'') AND IATRB1 IN (''L'',''I'',''LI'')')";
 
             using (SqlCommand cmd = new SqlCommand(query, db.Con))
             {
@@ -1057,12 +1046,14 @@ namespace WMS_API.Repository
 
             return list.ToList();
         }
-        //ListCSHDET
-        public async Task<List<GeneralModel>> ListCSHDET(OledbCon db,string start, string end)
+
+        //ListCSHDET - List of Sales GroupBy SKu,,store,Date
+        public async Task<List<GeneralModel>> ListOfSales(OledbCon db,string start, string end)
         {
             List<GeneralModel> list = new List<GeneralModel>();
 
-            string query = "select * from Openquery([snr], 'SELECT CSSKU, CSDATE, MAX(CSSTOR) CSSTOR, SUM(CSQTY) CSQTY from MMJDALIB.CSHDET where CSDATE BETWEEN ''" + start + "'' AND ''" + end + "'' GROUP BY CSSKU, CSDATE ')";
+            string query = "select * from Openquery([snr], 'SELECT CSSKU, CSDATE, MAX(CSSTOR) CSSTOR, SUM(CSQTY) CSQTY from MMJDALIB.CSHDET where CSDATE BETWEEN ''" + start + "'' AND ''" + end + "'' GROUP BY CSSKU ,CSDATE ')";
+            //string query = "select * from Openquery([snr], 'SELECT CSSKU, CSDATE, CSSTOR, SUM(CSQTY) CSQTY from MMJDALIB.CSHDET where CSDATE BETWEEN ''" + start + "'' AND ''" + end + "'' GROUP BY CSSKU, CSSTOR ,CSDATE ')";
 
             using (SqlCommand cmd = new SqlCommand(query, db.Con))
             {
@@ -1087,13 +1078,18 @@ namespace WMS_API.Repository
 
             return list.ToList();
         }
-        //ListINVBAL
-        public async Task<List<GeneralModel>> ListINVBAL(OledbCon db)
+
+        //ListINVBAL - List of Inventory Groupby SKU
+        public async Task<List<GeneralModel>> ListIventory(OledbCon db)
         {
             List<GeneralModel> list = new List<GeneralModel>();
 
-            // string query = "select * from Openquery([snr], 'SELECT INUMBR, CASE WHEN MAX(IBHAND) < 0 THEN 0 ELSE MAX(IBHAND) END AS IBHAND from MMJDALIB.INVBAL GROUP BY INUMBR')";
-            string query = "select * from Openquery([snr], 'SELECT INUMBR ,ISTORE, CASE WHEN MAX(IBHAND) < 0 THEN 0 ELSE MAX(IBHAND) END AS IBHAND from MMJDALIB.INVBAL GROUP BY INUMBR ,ISTORE')";
+             string query = "select * from Openquery([snr], 'SELECT INUMBR ,Max(ISTORE) ISTORE , CASE WHEN SUM(IBHAND) < 0 THEN 0 ELSE SUM(IBHAND) END AS IBHAND from MMJDALIB.INVBAL GROUP BY INUMBR')";
+            //string query = "select * from Openquery([snr], 'SELECT INUMBR ,ISTORE, CASE WHEN MAX(IBHAND) < 0 THEN 0 ELSE MAX(IBHAND) END AS IBHAND from MMJDALIB.INVBAL GROUP BY INUMBR ,ISTORE')";
+            //string query = "select * from Openquery([snr], 'SELECT MST.INUMBR, MAX(BAL.ISTORE) ISTORE, SUM(BAL.IBHAND) IBHAND from MMJDALIB.INVMST as MST " +
+            //    "INNER JOIN MMJDALIB.INVBAL as BAL on MST.INUMBR = BAL.INUMBR " +
+            //    "WHERE MST.ISTYPE = ''01'' AND MST.IDSCCD IN (''A'',''I'',''D'',''P'') AND MST.IATRB1 IN (''L'',''I'',''LI'') " +
+            //    "GROUP BY MST.INUMBR')";
 
             using (SqlCommand cmd = new SqlCommand(query, db.Con))
             {
@@ -1106,6 +1102,7 @@ namespace WMS_API.Repository
                         GeneralModel Olde = new GeneralModel
                         {
                             INUMBR2 = reader["INUMBR"].ToString(),
+                            ISTORE = reader["ISTORE"].ToString(),
                             IBHAND = Convert.ToDecimal(reader["IBHAND"].ToString())
                         };
 
@@ -1116,9 +1113,11 @@ namespace WMS_API.Repository
 
             return list.ToList();
         }
-        
-        //ListTBLSTR
-        public async Task<List<GeneralModel>> ListTBLSTR(OledbCon db)
+
+        //ListTBLSTR - List of ALL STORE with Filter STPOLL = ''Y'' AND STSDAT > 0
+        //STPOLL - Identify Store Open
+        // STSDAT - Date Open of Store
+        public async Task<List<GeneralModel>> ListOfAllStore(OledbCon db)
         {
             List<GeneralModel> list = new List<GeneralModel>();
 
