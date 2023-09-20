@@ -118,7 +118,7 @@ namespace ads.Repository
                                 {
                                     Sku = item.INUMBR,
                                     Clubs = item2.CSSTOR,
-                                    Sales = item.CSQTY,
+                                    Sales = item2.CSQTY,
                                     Date = item2.CSDATE,
                                 };
 
@@ -143,18 +143,18 @@ namespace ads.Repository
                                     listOfOledb.Add(Olde);
                                 }
                             }
-                            //else
-                            //{
-                            //    Olde = new DataRows
-                            //    {
-                            //        Sku = item.INUMBR,
-                            //        Clubs = "No Clubs",
-                            //        Sales = 0,
-                            //        Date = start,
-                            //    };
+                            else
+                            {
+                                Olde = new DataRows
+                                {
+                                    Sku = item.INUMBR,
+                                    Clubs = "Null",
+                                    Sales = 0,
+                                    Date = start,
+                                };
 
-                            //    listOfOledb.Add(Olde);
-                            //}
+                                listOfOledb.Add(Olde);
+                            }
                         }
                     }
 
@@ -300,18 +300,18 @@ namespace ads.Repository
                                 }
                             }
                         }
-                        //else
-                        //{
-                        //    Olde = new Inventory
-                        //    {
-                        //        Sku = item.INUMBR,
-                        //        Clubs = "No Clubs",
-                        //        Inv = 0,
-                        //        Date = start,
-                        //    };
+                        else
+                        {
+                            Olde = new Inventory
+                            {
+                                Sku = item.INUMBR,
+                                Clubs = "Null",
+                                Inv = 0,
+                                Date = start,
+                            };
 
-                        //    ListInventory.Add(Olde);
-                        //}
+                            ListInventory.Add(Olde);
+                        }
                     }
 
                     Console.WriteLine(ListInventory);
@@ -676,7 +676,7 @@ namespace ads.Repository
                         StartLog = startLogs,
                         EndLog = endLogs,
                         Action = "Total ADS",
-                        Message = "Total Sku Inserted : " + filter.Count + "",
+                        Message = "Total Sku Inserted : " + totalAPDs.Count() + "",
                         Record_Date = lastDate
                     });
 
@@ -873,7 +873,7 @@ namespace ads.Repository
                         StartLog = startLogs,
                         EndLog = endLogs,
                         Action = "Total ADS",
-                        Message = "Total Clubs Inserted : " + filter.Count + "",
+                        Message = "Total Clubs Inserted : " + totalAPDs.Count() + "",
                         Record_Date = lastDate
                     });
 
