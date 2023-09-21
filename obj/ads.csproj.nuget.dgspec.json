@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\ralcaraz\\Videos\\ADS\\Ads-SNR\\ads.csproj": {}
+    "C:\\Users\\ralcaraz\\Videos\\ADS\\Ads-SNR - UpdateCode\\ads.csproj": {}
   },
   "projects": {
-    "C:\\Users\\ralcaraz\\Videos\\ADS\\Ads-SNR\\ads.csproj": {
+    "C:\\Users\\ralcaraz\\Videos\\ADS\\Ads-SNR - UpdateCode\\ads.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\ralcaraz\\Videos\\ADS\\Ads-SNR\\ads.csproj",
+        "projectUniqueName": "C:\\Users\\ralcaraz\\Videos\\ADS\\Ads-SNR - UpdateCode\\ads.csproj",
         "projectName": "ads",
-        "projectPath": "C:\\Users\\ralcaraz\\Videos\\ADS\\Ads-SNR\\ads.csproj",
+        "projectPath": "C:\\Users\\ralcaraz\\Videos\\ADS\\Ads-SNR - UpdateCode\\ads.csproj",
         "packagesPath": "C:\\Users\\ralcaraz\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\ralcaraz\\Videos\\ADS\\Ads-SNR\\obj\\",
+        "outputPath": "C:\\Users\\ralcaraz\\Videos\\ADS\\Ads-SNR - UpdateCode\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\ralcaraz\\AppData\\Roaming\\NuGet\\NuGet.Config",

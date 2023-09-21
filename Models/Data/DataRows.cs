@@ -8,6 +8,6 @@
         public decimal Sales { get; set; }
         public int Divisor { get; set; }
         public decimal APD { get; set; }
-        public string? Date { get; set; }
+        public DateTime Date { get; set; }
     }
 }

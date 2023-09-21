@@ -1,22 +1,29 @@
 using Quartz;
 using ads.Repository;
-
+using ads.Interface;
 
 var builder = WebApplication.CreateBuilder(args);
+
+//Independe Injection
+builder.Services.AddScoped<IInvetory, InventoryRepo>();
+builder.Services.AddScoped<ISales, SalesRepo>();
+builder.Services.AddScoped<IAds, AdsRepo>();
+builder.Services.AddScoped<IOpenQuery, OpenQueryRepo>();
+builder.Services.AddScoped<ILogs, LogsRepo>();
 
 //Quartz run for cronjob
 builder.Services.AddQuartz(q =>
 {
     q.UseMicrosoftDependencyInjectionJobFactory();
     var jobKey = new JobKey("DataRepo");
-    q.AddJob<DataRepo>(opts => opts.WithIdentity(jobKey));
+    q.AddJob<CronJobsADSRepo>(opts => opts.WithIdentity(jobKey));
 
     q.AddTrigger(opts => opts
         .ForJob(jobKey)
         .WithIdentity("DataRepo-trigger")
-       //.WithCronSchedule("35 21 08 * * ?"));
+       .WithCronSchedule("25 24 09 * * ?"));
     ////Actual Record of Final Records
-    .WithCronSchedule("01 00 06 * * ?"));
+    //.WithCronSchedule("01 00 06 * * ?"));
 
 });
 
