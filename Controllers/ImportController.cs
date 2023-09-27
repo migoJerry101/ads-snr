@@ -22,19 +22,6 @@ namespace ads.Controllers
         }
 
         [HttpPost]
-        [Route("ImportInventoryAndSales")]
-        public async Task<IActionResult> Import(List<string> dates)
-        {
-            foreach (var item in dates)
-            {
-                //await _invetory.GetInventoryAsync(item, item);
-/*                await _sales.GetSalesAsync(item, item);*/
-            }
-
-            return Ok();
-        }
-
-        [HttpPost]
         [Route("GetInventory")]
         public async Task<IActionResult> GetInventory(string dates)
         {
