@@ -3,7 +3,10 @@ using ads.Interface;
 using ads.Models.Data;
 using ads.Utility;
 using Microsoft.Data.SqlClient;
+using System.Collections.Generic;
 using System.Data;
+using System.Drawing;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 namespace ads.Repository
 {
@@ -13,15 +16,36 @@ namespace ads.Repository
         private readonly ILogs _logs;
 
         private readonly DateConvertion dateConvertion = new DateConvertion();
+        private List<DataRows> _saleList = new List<DataRows>();
 
         public SalesRepo(IOpenQuery openQuery, ILogs logs)
-        { 
+        {
             _openQuery = openQuery;
             _logs = logs;
         }
 
+        private List<DataRows> GenerateListOfDataRows(List<GeneralModel> datas, string sku, bool hasSales, bool useStartDate, string? date)
+        {
+            List<DataRows> listOfOledb = new List<DataRows>();
+
+            foreach (var data in datas)
+            {
+                var Olde = new DataRows
+                {
+                    Sku = sku,
+                    Clubs = data.CSSTOR ?? data.ISTORE,
+                    Sales = hasSales ? data.CSQTY : 0,
+                    Date = dateConvertion.ConvertStringDate(!useStartDate ? data.CSDATE : date),
+                };
+
+                listOfOledb.Add(Olde);
+            }
+
+            return listOfOledb;
+        }
+
         //Get Sales
-        public async Task<List<DataRows>> GetSalesAsync(string start, string end)
+        public async Task<List<DataRows>> GetSalesAsync(string start, string end, List<GeneralModel> skus, List<GeneralModel> listOfSales, List<GeneralModel> inventories)
         {
             List<DataRows> transformedData = new List<DataRows>();
 
@@ -37,83 +61,42 @@ namespace ads.Repository
 
             try
             {
-
                 //OleDb Select Query
                 using (OledbCon db = new OledbCon())
                 {
-                    await db.OpenAsync();
-
-                    //var groupedCSHDET = CSHDET.GroupBy(x => x.CSSKU).ToDictionary(group => group.Key, group => group.ToList());
-                    ////var dicInv = CSHDET.ToDictionary(x => x.CSSKU, y => new { y.CSQTY, y.CSDATE, y.CSSTOR });
-
-                    //foreach (var item in INVSMST)
-                    //{
-                    //    if (groupedCSHDET.TryGetValue(item.INUMBR, out var salesList))
-                    //    {
-                    //        DataRows Olde = new DataRows
-                    //        {
-                    //            Clubs = item.CSSTOR,
-                    //            Sku = item.INUMBR,
-                    //            Sales = salesList.Sum(sales => sales.CSQTY),
-                    //            Date = salesList.First().CSDATE, // Assuming you want the date from the first matching record
-                    //        };
-
-                    //        listOfOledb.Add(Olde);
-                    //    }
-                    //}
-
-                    var inventorys = await _openQuery.ListIventory(db);
-                    var skus = await _openQuery.ListOfAllSKu(db);
-                    var listOfSales = await _openQuery.ListOfSales(db, start, end);
-
-                    foreach (var item in skus)
+                    if (db.Con.State == ConnectionState.Closed)
                     {
-                        var DATE = "";
-                        DataRows Olde;
+                        db.Con.Open();
+                    }
 
-                        var result2 = listOfSales.Where(x => x.CSSKU == item.INUMBR);
+                    var inventoryLookup = inventories.GroupBy(x => x.INUMBR2).ToDictionary(group => group.Key, group => group.ToList());
+                    var salesLookup = listOfSales.GroupBy(x => x.CSSKU).ToDictionary(group => group.Key, group => group.ToList());
 
-                        if (result2.Any())
+                    foreach (var sku in skus)
+                    {
+                        if (salesLookup.TryGetValue(sku.INUMBR, out var salesOut))
                         {
-                            foreach (var item2 in result2)
-                            {
-                                DATE = item2.CSDATE;
+                            var generatedList = GenerateListOfDataRows(salesOut, sku.INUMBR, false, false, start);
 
-                                Olde = new DataRows
-                                {
-                                    Sku = item.INUMBR,
-                                    Clubs = item2.CSSTOR,
-                                    Sales = item2.CSQTY,
-                                    Date = dateConvertion.ConvertStringDate(item2.CSDATE),
-                                };
-
-                                listOfOledb.Add(Olde);
-                            }
+                            listOfOledb.AddRange(generatedList);
                         }
                         else
                         {
-                            var result3 = inventorys.Where(x => x.INUMBR2 == item.INUMBR);
-                            if (result3.Any())
+                            if (inventoryLookup.TryGetValue(sku.INUMBR, out var inventoryOut))
                             {
-                                foreach (var item2 in result3)
-                                {
-                                    Olde = new DataRows
-                                    {
-                                        Sku = item.INUMBR,
-                                        Clubs = item2.ISTORE,
-                                        Sales = 0,
-                                        Date = dateConvertion.ConvertStringDate(start),
-                                    };
+                                var generatedList = GenerateListOfDataRows(inventoryOut, sku.INUMBR, true, true, start);
 
-                                    listOfOledb.Add(Olde);
-                                }
+                                listOfOledb.AddRange(generatedList);
                             }
                             else
                             {
-                                Olde = new DataRows
+                                // this entry is in the master list of sku, but not yet part of sales and enventory table
+                                // this is used when computing chain/all store ADS
+                                // this is filtered out when computing ADS of per store per sku
+                                var Olde = new DataRows
                                 {
-                                    Sku = item.INUMBR,
-                                    Clubs = "Null",
+                                    Sku = sku.INUMBR,
+                                    Clubs = string.Empty,
                                     Sales = 0,
                                     Date = dateConvertion.ConvertStringDate(start),
                                 };
@@ -156,14 +139,13 @@ namespace ads.Repository
                     }
                 }
 
-                var TotalRows = TotalSales(start, end);
                 DateTime endLogs = DateTime.Now;
                 Log.Add(new Logging
                 {
                     StartLog = startLogs,
                     EndLog = endLogs,
                     Action = "Sales",
-                    Message = "Total Rows Inserted : " + TotalRows + "",
+                    Message = "Total Rows Inserted : " + listOfOledb.Count + "",
                     Record_Date = start
                 });
 
@@ -191,15 +173,68 @@ namespace ads.Repository
 
         }
 
+        public async Task GetAllSales(string dateListString, int pageSize, int offset, OledbCon db)
+        {
+            try
+            {
+                await Task.Run(() =>
+                {
+/*                    string query = "select * from tbl_data where Date in (" + dateListString + ") " +
+                        "ORDER BY Date OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY ";*/
+
+                    string strConn = "data source='199.84.0.201';Initial Catalog=ADS.UAT;User Id=sa;password=@dm1n@8800;Trusted_Connection=false;MultipleActiveResultSets=true;TrustServerCertificate=True;";
+                    var con = new SqlConnection(strConn);
+
+                    using (var command = new SqlCommand("_sp_GetTblDataSample", con))
+                    {
+                        command.CommandType = CommandType.StoredProcedure;
+                        command.Parameters.AddWithValue("@Offset", offset);
+                        command.Parameters.AddWithValue("@PageSize", pageSize);
+                        command.Parameters.AddWithValue("@dateListString", dateListString);
+                        command.CommandTimeout = 18000;
+                        con.Open();
+
+                        // Open the connection and execute the command
+                        SqlDataReader reader = command.ExecuteReader();
+
+                        // Process the result set
+                        while (reader.Read())
+                        {
+
+                            DataRows Olde = new DataRows
+                            {
+                                Clubs = reader["Clubs"].ToString(),
+                                Sku = reader["Sku"].ToString(),
+                                Sales = Convert.ToDecimal(reader["Sales"].ToString()),
+                                Date = reader.GetDateTime("Date"),
+                            };
+
+                            _saleList.Add(Olde);
+                        }
+
+                        // Close the reader and connection
+                        reader.Close();
+                        con.Close();
+                    }
+                });
+
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Error: " + e.Message);
+            }
+        }
+
         //list Data
         public async Task<List<DataRows>> ListSales(string dateListString, OledbCon db)
         {
             List<DataRows> list = new List<DataRows>();
-
-            var pageSize = 400000;
+            var tasks = new List<Task>();
+      /*      var pageSize = 5000*/;
 
             // Get the total count of rows for your date filter
             var rowCount = await CountSales(dateListString, db);
+            var pageSize = (int)Math.Ceiling((double)rowCount /5);
 
             // Calculate the total number of pages
             var totalPages = (int)Math.Ceiling((double)rowCount / pageSize);
@@ -208,36 +243,12 @@ namespace ads.Repository
             {
                 int offset = pageSize * pageNumber;
 
-                string query = "select * from tbl_data where Date in (" + dateListString + ") " +
-                    "ORDER BY Date OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY ";
-                //string query = "select * from tbl_data where Date = '230911' " +
-                //    "ORDER BY Date OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY ";
-
-                using (SqlCommand cmd = new SqlCommand(query, db.Con))
-                {
-                    cmd.Parameters.AddWithValue("@Offset", offset);
-                    cmd.Parameters.AddWithValue("@PageSize", pageSize);
-                    cmd.CommandTimeout = 18000;
-
-                    using (var reader = await cmd.ExecuteReaderAsync())
-                    {
-                        while (await reader.ReadAsync())
-                        {
-                            DataRows Olde = new DataRows
-                            {
-                                Clubs = reader["Clubs"].ToString(),
-                                Sku = reader["Sku"].ToString(),
-                                Sales = Convert.ToDecimal(reader["Sales"].ToString()),
-                                Date = Convert.ToDateTime(reader["Date"].ToString()),
-                            };
-                            Console.WriteLine(reader["Clubs"].ToString());
-                            list.Add(Olde);
-                        }
-                    }
-                }
+                tasks.Add(GetAllSales(dateListString.Replace("'", ""), pageSize, offset, db));
             }
 
-            return list;
+            await Task.WhenAll(tasks);
+
+            return _saleList;
         }
 
         //Total Sales

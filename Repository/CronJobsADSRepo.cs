@@ -27,12 +27,14 @@ namespace ads.Repository
         private readonly IInvetory _inventory;
         private readonly ISales _sales;
         private readonly IAds _ads;
+        private readonly IOpenQuery _openQuery;
 
-        public CronJobsADSRepo(IInvetory invetory, ISales sales, IAds ads)
+        public CronJobsADSRepo(IInvetory invetory, ISales sales, IAds ads, IOpenQuery openQuery)
         {
             _inventory = invetory;
             _sales = sales;
             _ads = ads;
+            _openQuery = openQuery;
         }
 
         public async Task Execute(IJobExecutionContext context)
@@ -50,31 +52,22 @@ namespace ads.Repository
                 DateTime previousDate = currentDate.AddDays(-1);
 
                 ////////Actual Record or Final Setup
-                //string startDate = previousDate.ToString("yyMMdd");
-                //string endDate = previousDate.ToString("yyMMdd");
+                string startDate = previousDate.ToString("yyMMdd");
+                string endDate = previousDate.ToString("yyMMdd");
 
-                string startDate = "230919";
-                string endDate = "230919";
+                using (OledbCon db = new OledbCon())
+                {
+                    await db.OpenAsync();
 
-                await _inventory.GetInventoryAsync(startDate, startDate);
-                await _sales.GetSalesAsync(startDate, startDate);
-                await _ads.GetComputation();
+                    var inventory = await _openQuery.ListIventory(db);
+                    var skus = await _openQuery.ListOfAllSKu(db);
+                    var sales = await _openQuery.ListOfSales(db, startDate, endDate);
 
-                //List<string> dates = new List<string>();
-                //dates.Add("230708");
-                //dates.Add("230709");
-                //dates.Add("230710");
-                //dates.Add("230711");
-                //dates.Add("230712");
-                //dates.Add("230713");
-                //dates.Add("230714");
+                    await _inventory.GetInventoryAsync(startDate, startDate, skus, sales, inventory);
+                    await _sales.GetSalesAsync(startDate, startDate, skus, sales, inventory);
+                }
 
-                //foreach (var item in dates)
-                //{
-                //    await GetInventoryAsync(item, item);
-                //    await GetSalesAsync(item, item);
-                //}
-
+                //await _ads.GetComputation();
             }
             catch (Exception e)
             {

@@ -38,7 +38,7 @@ namespace ads.Repository
 
             DateTime currentDate = DateTime.Now;
 
-            string startDate = currentDate.ToString("yyMMdd");
+            var startDate = currentDate;
             //string startDate = "230913";
 
             //Date Ranges of Computation of 56 days
@@ -54,12 +54,13 @@ namespace ads.Repository
                 //list of Sales within 56 days in Local DB
                 var listSalesResult = await _sales.ListSales(dateListString, db);
 
-                //Per SKU
-                await GetTotalApdAsync(listInventoryResult, listSalesResult, dateListString);
-                //Per Store
-                await GetTotalSkuAndClubsAsync(listInventoryResult, listSalesResult, dateListString);
+                ////Per SKU
+                //await GetTotalApdAsync(listInventoryResult, listSalesResult, dateListString);
+                //////Per Store
+                //await GetTotalSkuAndClubsAsync(listInventoryResult, listSalesResult, dateListString);
 
             }
+
             return returnlist;
         }
 

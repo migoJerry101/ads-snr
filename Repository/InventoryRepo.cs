@@ -4,6 +4,7 @@ using ads.Models.Data;
 using Microsoft.Data.SqlClient;
 using System.Data;
 using ads.Utility;
+using Microsoft.IdentityModel.Tokens;
 
 namespace ads.Repository
 {
@@ -13,6 +14,7 @@ namespace ads.Repository
         private readonly ILogs _logs ;
 
         private readonly DateConvertion dateConvertion = new DateConvertion();
+        public List<Inventory> _inventoryList = new List<Inventory>();
 
         public InventoryRepo(IOpenQuery openQuery, ILogs logs)
         { 
@@ -21,7 +23,7 @@ namespace ads.Repository
         }
 
         //Get Inventory
-        public async Task<List<Inventory>> GetInventoryAsync(string start, string end)
+        public async Task<List<Inventory>> GetInventoryAsync(string start, string end, List<GeneralModel> skus, List<GeneralModel> sales, List<GeneralModel> inventory)
         {
             List<Inventory> ListCsDate = new List<Inventory>();
 
@@ -38,74 +40,57 @@ namespace ads.Repository
                 //OleDb Select Query Invetory
                 using (OledbCon db = new OledbCon())
                 {
-                    await db.OpenAsync(); // Open the connection asynchronously
-
-                    //Implement for checking
-                    //var TBLSTR = await ListOfAllStore(db);
-                    var INVSMST = await _openQuery.ListOfAllSKu(db);
-                    var CSHDET = await _openQuery.ListOfSales(db, start, end);
-                    var INVBAL = await _openQuery.ListIventory(db);
-
-                    //var store = TBLSTR.ToDictionary(x => x.STRNUM);
-
-                    foreach (var item in INVSMST)
+                    if (db.Con.State == ConnectionState.Closed)
                     {
-                        var DATE = "";
+                        db.Con.Open();
+                    }
 
-                        Inventory Olde;
+                    var skuDictionary = skus.ToDictionary(x => x.INUMBR);
+                    
+                    var inventoryDictionary = inventory.GroupBy(y=> y.INUMBR2).ToDictionary(x => x.Key, x=> x.ToList());
+                    var SalesDictonary = sales.ToDictionary(y => $"{y.CSSKU + y.CSSTOR}", x => x.CSDATE);
 
-                        var result = INVBAL.Where(x => x.INUMBR2 == item.INUMBR);
 
-                        //store.TryGetValue(item2.INUMBR2);
-
-                        if (result.Any())
+                    foreach (var sku in skus)
+                    {
+                        if (inventoryDictionary.TryGetValue(sku.INUMBR, out var inventoryOut))
                         {
-                            foreach (var item2 in result)
+                            foreach (var inv in inventoryOut)
                             {
-                                var result2 = CSHDET.Where(x => x.CSSKU == item2.INUMBR2);
-
-                                if (result2.Any())
+                                if (SalesDictonary.TryGetValue($"{sku.INUMBR + inv.ISTORE}", out var saleDate))
                                 {
-                                    foreach (var item3 in result2)
+                                    var date = saleDate;
+
+                                    ListInventory.Add(new Inventory
                                     {
-                                        DATE = item2.CSDATE;
-
-                                        Olde = new Inventory
-                                        {
-                                            Sku = item.INUMBR,
-                                            Clubs = item3.CSSTOR,
-                                            Inv = item2.IBHAND,
-                                            Date = dateConvertion.ConvertStringDate(item3.CSDATE),
-                                        };
-
-                                        ListInventory.Add(Olde);
-                                    }
+                                        Sku = sku.INUMBR,
+                                        Clubs = inv.ISTORE,
+                                        Inv = inv.IBHAND,
+                                        Date = dateConvertion.ConvertStringDate(date),
+                                    });
                                 }
                                 else
                                 {
-                                    Olde = new Inventory
+                                    ListInventory.Add(new Inventory
                                     {
-                                        Sku = item.INUMBR,
-                                        Clubs = item2.ISTORE,
-                                        Inv = item2.IBHAND,
+                                        Sku = sku.INUMBR,
+                                        Clubs = inv.ISTORE,
+                                        Inv = inv.IBHAND,
                                         Date = dateConvertion.ConvertStringDate(start),
-                                    };
-
-                                    ListInventory.Add(Olde);
+                                    });
                                 }
                             }
                         }
                         else
                         {
-                            Olde = new Inventory
+
+                            ListInventory.Add(new Inventory
                             {
-                                Sku = item.INUMBR,
-                                Clubs = "Null",
+                                Sku = sku.INUMBR,
+                                Clubs = string.Empty,
                                 Inv = 0,
                                 Date = dateConvertion.ConvertStringDate(start),
-                            };
-
-                            ListInventory.Add(Olde);
+                            });
                         }
                     }
 
@@ -143,7 +128,6 @@ namespace ads.Repository
                     }
 
                 }
-                string TotalRows = TotalInventory(start, end);
 
                 DateTime endLogs = DateTime.Now;
                 Log.Add(new Logging
@@ -151,7 +135,7 @@ namespace ads.Repository
                     StartLog = startLogs,
                     EndLog = endLogs,
                     Action = "Inventory",
-                    Message = "Total Rows Inserted : " + TotalRows + "",
+                    Message = "Total Rows Inserted : " + ListInventory.Count + "",
                     Record_Date = start
                 });
 
@@ -180,52 +164,112 @@ namespace ads.Repository
             }
         }
 
-        //list Inventory 
-        public async Task<List<Inventory>> ListInv(string dateListString, OledbCon db)
+        public async Task GetInventories(string dateListString, int pageSize, int offset, OledbCon db )
         {
-            List<Inventory> list = new List<Inventory>();
-
-            var pageSize = 400000;
-
-            // Get the total count of rows for your date filter
-            var rowCount = await CountInventory(dateListString, db);
-
-            // Calculate the total number of pages
-            var totalPages = (int)Math.Ceiling((double)rowCount / pageSize);
-            for (int pageNumber = 0; pageNumber < totalPages; pageNumber++)
+            try
             {
-                int offset = pageSize * pageNumber;
-
-                //string query = "select * from tbl_inv where Date in (" + dateListString + ") ";   
-                string query = "select * from tbl_inv where Date in (" + dateListString + ") " +
-                        "ORDER BY Date OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY ";
-                //string query = "select * from tbl_inv where Date = '230911' ";
-
-                using (SqlCommand cmd = new SqlCommand(query, db.Con))
+                await Task.Run(() =>
                 {
-                    cmd.Parameters.AddWithValue("@Offset", offset);
-                    cmd.Parameters.AddWithValue("@PageSize", pageSize);
-                    cmd.CommandTimeout = 18000;
 
-                    using (var reader = await cmd.ExecuteReaderAsync())
+                    string strConn = "data source='199.84.0.201';Initial Catalog=ADS.UAT;User Id=sa;password=@dm1n@8800;Trusted_Connection=false;MultipleActiveResultSets=true;TrustServerCertificate=True;";
+                    var con = new SqlConnection(strConn);
+
+                    using (var command = new SqlCommand("_sp_GetTblDataSample1", con))
                     {
-                        while (await reader.ReadAsync())
+                        command.CommandType = CommandType.StoredProcedure;
+                        command.Parameters.AddWithValue("@Offset", offset);
+                        command.Parameters.AddWithValue("@PageSize", pageSize);
+                        command.Parameters.AddWithValue("@dateListString", dateListString);
+                        command.CommandTimeout = 18000;
+                        con.Open();
+
+                        // Open the connection and execute the command
+                        SqlDataReader reader = command.ExecuteReader();
+
+                        // Process the result set
+                        while (reader.Read())
                         {
+
+                            var date = reader.GetDateTime("Date");
+
                             Inventory Olde = new Inventory
                             {
                                 Clubs = reader["Clubs"].ToString(),
                                 Sku = reader["Sku"].ToString(),
                                 Inv = Convert.ToDecimal(reader["Inventory"].ToString()),
-                                Date = Convert.ToDateTime(reader["Date"].ToString()),
+                                Date = date,
                             };
 
-                            Console.WriteLine(reader["Date"].ToString());
-                            list.Add(Olde);
+                            _inventoryList.Add(Olde);
                         }
+
+                        // Close the reader and connection
+                        reader.Close();
+                        con.Close();
                     }
-                }
+
+                    //string query = "select * from tbl_inv where Date in (" + dateListString + ") " +
+                    //        "ORDER BY Date OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY ";
+
+                    //using (SqlCommand cmd = new SqlCommand(query, db.Con))
+                    //{
+                    //    cmd.Parameters.AddWithValue("@Offset", offset);
+                    //    cmd.Parameters.AddWithValue("@PageSize", pageSize);
+                    //    cmd.CommandTimeout = 18000;
+
+                    //    using (var reader = cmd.ExecuteReader())
+                    //    {
+                    //        while ( reader.Read())
+                    //        {
+                    //            var date = reader["Date"].ToString();
+
+                    //            Inventory Olde = new Inventory
+                    //            {
+                    //                Clubs = reader["Clubs"].ToString(),
+                    //                Sku = reader["Sku"].ToString(),
+                    //                Inv = Convert.ToDecimal(reader["Inventory"].ToString()),
+                    //                Date = dateConvertion.ConvertStringDate(date),
+                    //            };
+
+                    //            _inventoryList.Add(Olde);
+                    //        }
+                    //    }
+                    //}
+                });
             }
-            return list.ToList();
+            catch(Exception e) 
+            {
+                Console.WriteLine("Error: " + e.Message);
+            }
+
+        }
+
+        //list Inventory 
+        public async Task<List<Inventory>> ListInv(string dateListString, OledbCon db)
+        {
+            List<Inventory> list = new List<Inventory>();
+            var tasks = new List<Task>();
+
+            //var pageSize = 400000;
+
+            // Get the total count of rows for your date filter
+            var rowCount = await CountInventory(dateListString, db);
+            var pageSize = (int)Math.Ceiling((double)rowCount / 5);
+
+            // Calculate the total number of pages
+            var totalPages = (int)Math.Ceiling((double)rowCount / pageSize);
+            // Calculate the total number of pages
+            //50
+            for (int pageNumber = 0; pageNumber < totalPages; pageNumber++)
+            {
+                var offset = pageSize * pageNumber;
+
+                tasks.Add(GetInventories(dateListString.Replace("'", ""), pageSize, offset, db));
+            }
+
+            await Task.WhenAll(tasks);
+
+            return _inventoryList;
         }
 
         //Total Inventory
@@ -259,11 +303,10 @@ namespace ads.Repository
         {
             int totalCount = 0;
 
-            string query = "select COUNT(*) as Count from tbl_inv where Date in (" + dateListString + ") ";
+            string query = "select COUNT(Id) as Count from tbl_inv where Date in (" + dateListString +") ";
 
             using (SqlCommand cmd = new SqlCommand(query, db.Con))
             {
-                cmd.CommandTimeout = 18000;
 
                 using (var reader = await cmd.ExecuteReaderAsync())
                 {

@@ -5,30 +5,21 @@ namespace ads.Utility
     public class DateComputeUtility
     {
         //List of Date within 56 days 
-        public List<string> DateCompute(string startDateStr)
+        public List<string> DateCompute(DateTime startDate)
         {
             List<string> listDate = new List<string>();
 
-            // Get the current date
-            DateTime currentDate = DateTime.ParseExact(startDateStr, "yyMMdd", CultureInfo.InvariantCulture);
+            DateTime endDate = startDate.AddDays(-55);
 
-            // Subtract one day
-            DateTime previousDate = currentDate.AddDays(-1);
-
-            DateTime endDate = previousDate;
-            DateTime startDate = endDate.AddDays(-55);
-
-
-            List<DateTime> datesInRange = GetDatesInRange(startDate, endDate);
-
-            foreach (DateTime date in datesInRange)
+            // Iterate through the date range
+            while (startDate > endDate)
             {
-                Console.WriteLine(date.ToString("yyMMdd"));
-
-                listDate.Add(date.ToString("yyMMdd"));
+                DateTime dateWithZeroTime = new DateTime(startDate.Year, startDate.Month, startDate.Day, 0, 0, 0, 0);
+                listDate.Add(dateWithZeroTime.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+                startDate = startDate.AddDays(-1); // Increment the startDate by one day
             }
 
-            return listDate.ToList();
+            return listDate;
         }
         public List<DateTime> GetDatesInRange(DateTime startDate, DateTime endDate)
         {
