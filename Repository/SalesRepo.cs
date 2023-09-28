@@ -76,17 +76,40 @@ namespace ads.Repository
                     {
                         if (salesLookup.TryGetValue(sku.INUMBR, out var salesOut))
                         {
-                            var generatedList = GenerateListOfDataRows(salesOut, sku.INUMBR, false, false, start);
+                            foreach (var data in salesOut)
+                            {
+                                var Olde = new DataRows
+                                {
+                                    Sku = sku.INUMBR,
+                                    Clubs = data.CSSTOR,
+                                    Sales = data.CSQTY,
+                                    Date = dateConvertion.ConvertStringDate( data.CSDATE),
+                                };
 
-                            listOfOledb.AddRange(generatedList);
+                                listOfOledb.Add(Olde);
+                            }
+                            //var generatedList = GenerateListOfDataRows(salesOut, sku.INUMBR, false, false, start);
+
+                            //listOfOledb.AddRange(generatedList);
                         }
                         else
                         {
                             if (inventoryLookup.TryGetValue(sku.INUMBR, out var inventoryOut))
                             {
-                                var generatedList = GenerateListOfDataRows(inventoryOut, sku.INUMBR, true, true, start);
+                                //var generatedList = GenerateListOfDataRows(inventoryOut, sku.INUMBR, true, true, start);
+                                foreach (var data in inventoryOut)
+                                {
+                                    var Olde = new DataRows
+                                    {
+                                        Sku = sku.INUMBR,
+                                        Clubs = data.ISTORE,
+                                        Sales = 0,
+                                        Date = dateConvertion.ConvertStringDate(start),
+                                    };
 
-                                listOfOledb.AddRange(generatedList);
+                                    listOfOledb.Add(Olde);
+                                }
+                                //listOfOledb.AddRange(generatedList);
                             }
                             else
                             {
@@ -161,7 +184,7 @@ namespace ads.Repository
                     StartLog = startLogs,
                     EndLog = endLogs,
                     Action = "Error",
-                    Message = "Sales : " + e.Message + "",
+                    Message = "Sales : " + e.Message + " : Date : " + start + "",
                     Record_Date = start
                 });
 

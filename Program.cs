@@ -11,6 +11,10 @@ builder.Services.AddScoped<IAds, AdsRepo>();
 builder.Services.AddScoped<IOpenQuery, OpenQueryRepo>();
 builder.Services.AddScoped<ILogs, LogsRepo>();
 
+builder.Services.AddScoped<IImportInventory, ImportInventoryRepo>();
+
+builder.Services.AddScoped<IAdsBackGroundTask, AdsBackGroundTaskRepo>();
+
 //Quartz run for cronjob
 builder.Services.AddQuartz(q =>
 {
@@ -21,9 +25,9 @@ builder.Services.AddQuartz(q =>
     q.AddTrigger(opts => opts
         .ForJob(jobKey)
         .WithIdentity("DataRepo-trigger")
-        .WithCronSchedule("59 44 7 * * ?"));
+        //.WithCronSchedule("50 38 16 * * ?"));
     ////Actual Record of Final Records
-    //.WithCronSchedule("01 00 06 * * ?"));
+    .WithCronSchedule("01 00 06 * * ?"));
 
 });
 

@@ -1,35 +1,17 @@
-﻿using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
+﻿using ads.Data;
+using ads.Interface;
 using Quartz;
 
-using System.Collections;
-using System.Collections.Generic;
-using System.Data;
-using System.Globalization;
-using System.Runtime.InteropServices;
-using System.Text.RegularExpressions;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
-using System.IO;
-using Newtonsoft.Json;
-using ads.Models.Data;
-using ads.Data;
-using Dapper;
-using static System.Net.WebRequestMethods;
-using System;
-using Azure.Core.GeoJson;
-using ads.Interface;
-//Final Code
 namespace ads.Repository
 {
-    public class CronJobsADSRepo : IJob
+    public class AdsBackGroundTaskRepo : IAdsBackGroundTask
     {
         private readonly IInvetory _inventory;
         private readonly ISales _sales;
         private readonly IAds _ads;
         private readonly IOpenQuery _openQuery;
 
-        public CronJobsADSRepo(IInvetory invetory, ISales sales, IAds ads, IOpenQuery openQuery)
+        public AdsBackGroundTaskRepo(IInvetory invetory, ISales sales, IAds ads, IOpenQuery openQuery)
         {
             _inventory = invetory;
             _sales = sales;
@@ -37,11 +19,11 @@ namespace ads.Repository
             _openQuery = openQuery;
         }
 
-        public async Task Execute(IJobExecutionContext context)
+        public async Task<string> ExecuteTask()
         {
-            string id = Guid.NewGuid().ToString();
-            string message = "This job will be executed again at: " +
-            context.NextFireTimeUtc.ToString();
+            //string id = Guid.NewGuid().ToString();
+            //string message = "This job will be executed again at: " +
+            //context.NextFireTimeUtc.ToString();
 
             try
             {
@@ -52,8 +34,11 @@ namespace ads.Repository
                 DateTime previousDate = currentDate.AddDays(-1);
 
                 ////////Actual Record or Final Setup
-                string startDate = previousDate.ToString("yyMMdd");
-                string endDate = previousDate.ToString("yyMMdd");
+                //string startDate = previousDate.ToString("yyMMdd");
+                //string endDate = previousDate.ToString("yyMMdd");
+                
+                string startDate = "";
+                string endDate = "";
 
                 using (OledbCon db = new OledbCon())
                 {
@@ -65,15 +50,17 @@ namespace ads.Repository
 
                     await _inventory.GetInventoryAsync(startDate, startDate, skus, sales, inventory);
                     await _sales.GetSalesAsync(startDate, startDate, skus, sales, inventory);
-
                 }
 
                 //await _ads.GetComputation();
+
+                return "Success";
             }
             catch (Exception e)
             {
                 Console.WriteLine(e.Message);
-                throw;
+
+                return "Error : " + e.Message + " ";
             }
 
             //return await Task.CompletedTask;

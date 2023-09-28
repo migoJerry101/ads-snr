@@ -18,14 +18,14 @@ namespace ads.Repository
         private readonly IInvetory _invetory;
 
 
-        public AdsRepo(ISales sales,IInvetory invetory)
+        public AdsRepo(ISales sales, IInvetory invetory)
         {
             _sales = sales;
             _invetory = invetory;
         }
 
 
-        public async Task<List<TotalADS>> GetComputation()
+        public async Task<List<TotalADS>> GetComputation(string stringDate)
         {
             List<TotalADS> returnlist = new List<TotalADS>();
 
@@ -38,12 +38,17 @@ namespace ads.Repository
 
             DateTime currentDate = DateTime.Now;
 
-            var startDate = currentDate;
+            //var startDate = currentDate;
             //string startDate = "230913";
+
+
+             DateTime startDate = Convert.ToDateTime(stringDate);
+            //DateTime startDate = Convert.ToDateTime("2023-05-22 00:00:00.000");
 
             //Date Ranges of Computation of 56 days
             string dateListString = string.Join(",", dateCompute.DateCompute(startDate).Select(date => $"'{date}'"));
             dateListString = dateListString.TrimEnd(',');
+
 
             using (OledbCon db = new OledbCon())
             {
@@ -54,10 +59,10 @@ namespace ads.Repository
                 //list of Sales within 56 days in Local DB
                 var listSalesResult = await _sales.ListSales(dateListString, db);
 
-                ////Per SKU
-                //await GetTotalApdAsync(listInventoryResult, listSalesResult, dateListString);
-                //////Per Store
-                //await GetTotalSkuAndClubsAsync(listInventoryResult, listSalesResult, dateListString);
+                //Per SKU
+                await GetTotalApdAsync(listInventoryResult, listSalesResult, dateListString);
+                ////Per Store
+                await GetTotalSkuAndClubsAsync(listInventoryResult, listSalesResult, dateListString);
 
             }
 
@@ -83,108 +88,126 @@ namespace ads.Repository
 
             try
             {
-                using (OledbCon db = new OledbCon())
+                var joinDataInv = listSalesResult.Join(
+                                  listInventoryResult,
+                                  x => x.Sku,
+                                  y => y.Sku,
+                                  (x, y) => new DataRows
+                                  {
+                                      Clubs = x.Clubs,
+                                      Sku = x.Sku,
+                                      Inventory = x.Inventory,
+                                      Sales = (x.Sales > 0) ? x.Sales : 0,
+                                      Date = x.Date
+                                  });
+
+                //GroupBy SKU
+                var groupedData = joinDataInv.GroupBy(item => new { item.Sku, item.Date });
+                //var listInv = await ListInv(dateListString, db);
+
+                //var listDataResult = await ListData(dateListString, db);
+
+                //GroupBy SKU
+                listData = groupedData.SelectMany(group => group).DistinctBy(item => new { item.Sku, item.Date }).ToList();
+
+                //Filter sku and sum of sales
+                var groupedBy = listData.GroupBy(x => x.Sku).ToDictionary(
+                                 group => group.Key,
+                                 group => group.Sum(item => item.Sales)
+                             );
+
+                List<TotalDiv> divs = new List<TotalDiv>();
+
+                //Distinct of SKU
+                var filter = listData.Select(x => new
                 {
-                    await db.OpenAsync();
+                    Sku = x.Sku,
+                }).Distinct().ToList();
 
-                    //var listInv = await ListInv(dateListString, db);
+                foreach (var f in filter)
+                {
+                    var checkSku = listData.Where(x => x.Sku == f.Sku && x.Sales == 0 && x.Inventory == 0);
+                    var totalDiv = listData.Select(x => x.Date).Distinct().Count();
 
-                    //var listDataResult = await ListData(dateListString, db);
-
-                    var joinDataInv = listSalesResult.Join(
-                         listInventoryResult,
-                         x => x.Sku,
-                         y => y.Sku,
-                         (x, y) => new DataRows
-                         {
-                             Clubs = x.Clubs,
-                             Sku = x.Sku,
-                             Inventory = x.Inventory,
-                             Sales = (x.Sales > 0) ? x.Sales : 0,
-                             Date = x.Date
-                         });
-
-                    //GroupBy SKU
-                    var groupedData = joinDataInv.GroupBy(item => new { item.Sku, item.Date });
-
-                    //GroupBy SKU
-                    listData = groupedData.SelectMany(group => group).DistinctBy(item => new { item.Sku, item.Date }).ToList();
-
-
-                    //Filter sku and sum of sales
-                    var groupedBy = listData.GroupBy(x => x.Sku).ToDictionary(
-                                     group => group.Key,
-                                     group => group.Sum(item => item.Sales)
-                                 );
-
-                    List<TotalDiv> divs = new List<TotalDiv>();
-
-                    //Distinct of SKU
-                    var filter = listData.Select(x => new
+                    if (checkSku.Any())
                     {
-                        Sku = x.Sku,
-                    }).Distinct().ToList();
-
-                    foreach (var f in filter)
-                    {
-                        var checkSku = listData.Where(x => x.Sku == f.Sku && x.Sales == 0 && x.Inventory == 0);
-                        var totalDiv = listData.Select(x => x.Date).Distinct().Count();
-
-                        if (checkSku.Any())
+                        foreach (var s in checkSku)
                         {
-                            foreach (var s in checkSku)
-                            {
-                                totalDiv -= 1;
-                            }
+                            totalDiv -= 1;
+                        }
 
-                            divs.Add(new TotalDiv { sku = f.Sku, total = totalDiv });
+                        divs.Add(new TotalDiv { sku = f.Sku, total = totalDiv });
+                    }
+                    else
+                    {
+                        divs.Add(new TotalDiv { sku = f.Sku, total = totalDiv });
+                    }
+
+                    decimal result = 0;
+
+                    groupedBy.TryGetValue(f.Sku.ToString(), out decimal totalSales);
+
+                    if (totalSales >= long.MinValue && totalSales <= long.MaxValue)
+                    {
+                        result = (long)totalSales;
+                    }
+
+                    decimal totalAPDDecimal = 0;
+
+                    var search = divs.SingleOrDefault(x => x.sku == f.Sku);
+
+                    if (search != null)
+                    {
+                        if (totalDiv != 0)
+                        {
+
+                            totalAPDDecimal = Math.Round(result / totalDiv, 2);
+                            Console.WriteLine(totalAPDDecimal);
+
+                            groupedBy.TryGetValue(f.Sku.ToString(), out decimal salesOut);
+                            long totalAPD = Convert.ToInt64(totalAPDDecimal);
+                            Console.WriteLine(totalAPD);
+
+                            totalAPDs.Add(new TotalADS
+                            {
+                                Divisor = totalDiv,
+                                Sales = salesOut,
+                                Ads = totalAPD,
+                                Date = lastDate,
+                                Sku = f.Sku.ToString(),
+                                StartDate = lastDate,
+                                EndDate = firstDate
+                            });
                         }
                         else
                         {
-                            divs.Add(new TotalDiv { sku = f.Sku, total = totalDiv });
-                        }
+                            //totalAPDDecimal = Math.Round(result / totalDiv, 2);
+                            //Console.WriteLine(totalAPDDecimal);
 
-                        decimal result = 0;
+                            ////groupedBy.TryGetValue(f.Sku.ToString(), out decimal salesOut);
+                            //long totalAPD = Convert.ToInt64(totalAPDDecimal);
+                            //Console.WriteLine(totalAPD);
 
-                        groupedBy.TryGetValue(f.Sku.ToString(), out decimal totalSales);
-
-                        if (totalSales >= long.MinValue && totalSales <= long.MaxValue)
-                        {
-                            result = (long)totalSales;
-                        }
-
-                        decimal totalAPDDecimal = 0;
-
-                        var search = divs.SingleOrDefault(x => x.sku == f.Sku);
-
-                        if (search != null)
-                        {
-                            if (totalDiv != 0)
+                            totalAPDs.Add(new TotalADS
                             {
+                                Divisor = totalDiv,
+                                Sales = 0,
+                                Ads = 0,
+                                Date = lastDate,
+                                Sku = f.Sku.ToString(),
+                                StartDate = lastDate,
+                                EndDate = firstDate
+                            });
 
-                                totalAPDDecimal = Math.Round(result / totalDiv, 2);
-                                Console.WriteLine(totalAPDDecimal);
-
-                                groupedBy.TryGetValue(f.Sku.ToString(), out decimal salesOut);
-                                long totalAPD = Convert.ToInt64(totalAPDDecimal);
-                                Console.WriteLine(totalAPD);
-
-                                totalAPDs.Add(new TotalADS
-                                {
-                                    Divisor = totalDiv,
-                                    Sales = salesOut,
-                                    Ads = totalAPD,
-                                    Date = lastDate,
-                                    Sku = f.Sku.ToString(),
-                                    StartDate = lastDate,
-                                    EndDate = firstDate
-                                });
-                            }
                         }
                     }
+                }
 
-                    Console.WriteLine(totalAPDs);
+                Console.WriteLine(totalAPDs);
 
+                using (OledbCon db = new OledbCon())
+                {
+                    await db.OpenAsync();
                     //Bluk insert
                     using (var transaction = db.Con.BeginTransaction())
                     {
@@ -254,6 +277,7 @@ namespace ads.Repository
 
                 return totalAPDs;
             }
+
         }
 
         public async Task<List<TotalADS>> GetTotalSkuAndClubsAsync(List<Inventory> listInventoryResult, List<DataRows> listSalesResult, string dateListString)
@@ -275,114 +299,130 @@ namespace ads.Repository
 
             try
             {
+
+                //var listInv = await ListInv(dateListString, db);
+
+                //var listDataResult = await ListData(dateListString, db);
+
+                var joinDataInv = listSalesResult.Join(
+                     listInventoryResult,
+                     x => x.Sku,
+                     y => y.Sku,
+                     (x, y) => new DataRows
+                     {
+                         Clubs = x.Clubs,
+                         Sku = x.Sku,
+                         Inventory = x.Inventory,
+                         Sales = (x.Sales > 0) ? x.Sales : 0,
+                         Date = x.Date
+                     });
+
+                var groupedData = joinDataInv.GroupBy(item => new { item.Sku, item.Clubs, item.Date });
+
+                listData = groupedData.SelectMany(group => group).DistinctBy(item => new { item.Sku, item.Clubs, item.Date }).ToList();
+
+                //Filter sku and sum of sales
+                var groupedBy = listData.GroupBy(x => new { x.Sku, x.Clubs }).ToDictionary(
+                                     group => group.Key,
+                                     group => group.Sum(item => item.Sales)
+                                 );
+
+                List<TotalDiv> divs = new List<TotalDiv>();
+
+                //Distinct of SKU
+                var filter = listData.Select(x => new
+                {
+                    Sku = x.Sku,
+                    Clubs = x.Clubs
+                }).Distinct().ToList();
+
+                foreach (var f in filter)
+                {
+                    var checkSku = listData.Where(x => x.Sku == f.Sku && x.Clubs == f.Clubs && x.Sales == 0 && x.Inventory == 0);
+                    var totalDiv = listData.Select(x => x.Date).Distinct().Count();
+
+                    if (checkSku.Any())
+                    {
+                        foreach (var s in checkSku)
+                        {
+                            totalDiv -= 1;
+                        }
+
+                        divs.Add(new TotalDiv { sku = f.Sku, clubs = f.Clubs, total = totalDiv });
+                    }
+                    else
+                    {
+                        divs.Add(new TotalDiv { sku = f.Sku, clubs = f.Clubs, total = totalDiv });
+                    }
+
+                    decimal result = 0;
+
+                    // Create a key with both Sku and Clubs
+                    var key = new { Sku = f.Sku, Clubs = f.Clubs };
+
+                    groupedBy.TryGetValue(key, out decimal totalSales);
+
+                    //groupedBy.TryGetValue(f.Sku,f.Clubs, out decimal totalSales);
+
+
+                    if (totalSales >= long.MinValue && totalSales <= long.MaxValue)
+                    {
+                        result = (long)totalSales;
+                    }
+
+                    decimal totalAPDDecimal = 0;
+
+                    var search = divs.SingleOrDefault(x => x.sku == f.Sku && x.clubs == f.Clubs);
+
+                    if (search != null)
+                    {
+                        //totalAPDDecimal = Math.Round(result / totalDiv, 2);
+                        //Console.WriteLine(totalAPDDecimal);
+
+                        if (totalDiv != 0)
+                        {
+                            totalAPDDecimal = Math.Round(result / totalDiv, 2);
+                            Console.WriteLine(totalAPDDecimal);
+
+                            groupedBy.TryGetValue(key, out decimal salesOut);
+                            long totalAPD = Convert.ToInt64(totalAPDDecimal);
+                            Console.WriteLine(totalAPD);
+
+                            totalAPDs.Add(new TotalADS
+                            {
+                                Divisor = totalDiv,
+                                Sales = salesOut,
+                                Ads = totalAPD,
+                                Date = lastDate,
+                                Sku = f.Sku,
+                                Clubs = f.Clubs,
+                                StartDate = lastDate,
+                                EndDate = firstDate
+                            });
+                        }
+                        else
+                        {
+                            totalAPDs.Add(new TotalADS
+                            {
+                                Divisor = totalDiv,
+                                Sales = 0,
+                                Ads = 0,
+                                Date = lastDate,
+                                Sku = f.Sku,
+                                Clubs = f.Clubs,
+                                StartDate = lastDate,
+                                EndDate = firstDate
+                            });
+                        }
+                    }
+                }
+
+                Console.WriteLine(totalAPDs);
+
                 using (OledbCon db = new OledbCon())
                 {
                     await db.OpenAsync();
 
-                    //var listInv = await ListInv(dateListString, db);
-
-                    //var listDataResult = await ListData(dateListString, db);
-
-                    var joinDataInv = listSalesResult.Join(
-                         listInventoryResult,
-                         x => x.Sku,
-                         y => y.Sku,
-                         (x, y) => new DataRows
-                         {
-                             Clubs = x.Clubs,
-                             Sku = x.Sku,
-                             Inventory = x.Inventory,
-                             Sales = (x.Sales > 0) ? x.Sales : 0,
-                             Date = x.Date
-                         });
-
-                    var groupedData = joinDataInv.GroupBy(item => new { item.Sku, item.Clubs, item.Date });
-
-                    listData = groupedData.SelectMany(group => group).DistinctBy(item => new { item.Sku, item.Clubs, item.Date }).ToList();
-
-                    //Filter sku and sum of sales
-                    var groupedBy = listData.GroupBy(x => new { x.Sku, x.Clubs }).ToDictionary(
-                                         group => group.Key,
-                                         group => group.Sum(item => item.Sales)
-                                     );
-
-                    List<TotalDiv> divs = new List<TotalDiv>();
-
-                    //Distinct of SKU
-                    var filter = listData.Select(x => new
-                    {
-                        Sku = x.Sku,
-                        Clubs = x.Clubs
-                    }).Distinct().ToList();
-
-                    foreach (var f in filter)
-                    {
-                        var checkSku = listData.Where(x => x.Sku == f.Sku && x.Clubs == f.Clubs && x.Sales == 0 && x.Inventory == 0);
-                        var totalDiv = listData.Select(x => x.Date).Distinct().Count();
-
-                        if (checkSku.Any())
-                        {
-                            foreach (var s in checkSku)
-                            {
-                                totalDiv -= 1;
-                            }
-
-                            divs.Add(new TotalDiv { sku = f.Sku, clubs = f.Clubs, total = totalDiv });
-                        }
-                        else
-                        {
-                            divs.Add(new TotalDiv { sku = f.Sku, clubs = f.Clubs, total = totalDiv });
-                        }
-
-                        decimal result = 0;
-
-                        // Create a key with both Sku and Clubs
-                        var key = new { Sku = f.Sku, Clubs = f.Clubs };
-
-                        groupedBy.TryGetValue(key, out decimal totalSales);
-
-                        //groupedBy.TryGetValue(f.Sku,f.Clubs, out decimal totalSales);
-
-
-                        if (totalSales >= long.MinValue && totalSales <= long.MaxValue)
-                        {
-                            result = (long)totalSales;
-                        }
-
-                        decimal totalAPDDecimal = 0;
-
-                        var search = divs.SingleOrDefault(x => x.sku == f.Sku && x.clubs == f.Clubs);
-
-                        if (search != null)
-                        {
-                            //totalAPDDecimal = Math.Round(result / totalDiv, 2);
-                            //Console.WriteLine(totalAPDDecimal);
-
-                            if (totalDiv != 0)
-                            {
-                                totalAPDDecimal = Math.Round(result / totalDiv, 2);
-                                Console.WriteLine(totalAPDDecimal);
-
-                                groupedBy.TryGetValue(key, out decimal salesOut);
-                                long totalAPD = Convert.ToInt64(totalAPDDecimal);
-                                Console.WriteLine(totalAPD);
-
-                                totalAPDs.Add(new TotalADS
-                                {
-                                    Divisor = totalDiv,
-                                    Sales = salesOut,
-                                    Ads = totalAPD,
-                                    Date = lastDate,
-                                    Sku = f.Sku,
-                                    Clubs = f.Clubs,
-                                    StartDate = lastDate,
-                                    EndDate = firstDate
-                                });
-                            }
-                        }
-                    }
-
-                    Console.WriteLine(totalAPDs);
 
                     //Bluk insert
                     using (var transaction = db.Con.BeginTransaction())

@@ -62,5 +62,14 @@ namespace ads.Controllers
                 return Ok(new { listOfSales });
             }
         }
+
+        [HttpPost]
+        [Route("Computation")]
+        public async Task<IActionResult> GetComputation(string start)
+        {
+            var computation = await _ads.GetComputation(start);
+
+            return Ok(computation);
+        }
     }
 }

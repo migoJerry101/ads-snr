@@ -164,8 +164,10 @@ namespace ads.Repository
             }
         }
 
-        public async Task GetInventories(string dateListString, int pageSize, int offset, OledbCon db )
+        public async Task GetInventories(string dateListString, int pageSize, int offset, OledbCon db)
         {
+            DateTime startLogs = DateTime.Now;
+            List<Logging> Log = new List<Logging>();
             try
             {
                 await Task.Run(() =>
@@ -237,9 +239,21 @@ namespace ads.Repository
                     //}
                 });
             }
-            catch(Exception e) 
+            catch (Exception e)
             {
                 Console.WriteLine("Error: " + e.Message);
+
+                DateTime endLogs = DateTime.Now;
+                Log.Add(new Logging
+                {
+                    StartLog = startLogs,
+                    EndLog = endLogs,
+                    Action = "Error",
+                    Message = "GetInventories : " + e.Message + " ",
+                    Record_Date = dateListString
+                });
+
+                _logs.InsertLogs(Log);
             }
 
         }
