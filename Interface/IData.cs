@@ -5,8 +5,7 @@ namespace ads.Interface
     public interface IData
     {
         Task<List<DataRows>> GetDataAsync(string start , string end);
-
         Task<List<Inventory>> GetInventoryAsync(string start, string end);
-        Task<List<TotalAPD>> GetTotalApdAsync(string start);
+        Task<List<TotalADS>> GetTotalApdAsync(string start);
     }
 }

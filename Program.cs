@@ -1,28 +1,37 @@
-using ads.Interface;
-using ads.Repository;
 using Quartz;
-using WMS_API.Repository;
-
+using ads.Repository;
+using ads.Interface;
 
 var builder = WebApplication.CreateBuilder(args);
 
+//Independe Injection
+builder.Services.AddScoped<IInvetory, InventoryRepo>();
+builder.Services.AddScoped<ISales, SalesRepo>();
+builder.Services.AddScoped<IAds, AdsRepo>();
+builder.Services.AddScoped<IOpenQuery, OpenQueryRepo>();
+builder.Services.AddScoped<ILogs, LogsRepo>();
 
-builder.Services.AddScoped<IAdsComputation, AdsComputationRepo>();
+builder.Services.AddScoped<IImportInventory, ImportInventoryRepo>();
 
+builder.Services.AddScoped<IAdsBackGroundTask, AdsBackGroundTaskRepo>();
+
+//Quartz run for cronjob
 builder.Services.AddQuartz(q =>
 {
     q.UseMicrosoftDependencyInjectionJobFactory();
     var jobKey = new JobKey("DataRepo");
-    q.AddJob<DataRepo>(opts => opts.WithIdentity(jobKey));
+    q.AddJob<CronJobsADSRepo>(opts => opts.WithIdentity(jobKey));
 
     q.AddTrigger(opts => opts
         .ForJob(jobKey)
         .WithIdentity("DataRepo-trigger")
-        .WithCronSchedule("10 04 09 * * ?"));
-        ////Actual Record of Final Records
-         //.WithCronSchedule("01 00 06 * * ?"));
+        //.WithCronSchedule("50 38 16 * * ?"));
+    ////Actual Record of Final Records
+    .WithCronSchedule("01 00 06 * * ?"));
 
 });
+
+
 
 builder.Services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
 
@@ -66,7 +75,8 @@ if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Web Api V1");
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "ADS");
+
     });
 }
 app.UseHttpsRedirection();
