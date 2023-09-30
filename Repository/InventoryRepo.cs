@@ -261,7 +261,7 @@ namespace ads.Repository
         //list Inventory 
         public async Task<List<Inventory>> ListInv(string dateListString, OledbCon db)
         {
-            List<Inventory> list = new List<Inventory>();
+            _inventoryList = new List<Inventory>();
             var tasks = new List<Task>();
 
             //var pageSize = 400000;
@@ -332,6 +332,36 @@ namespace ads.Repository
             }
 
             return totalCount;
+        }
+
+        public async Task<List<Inventory>> GetInventoriesByDate(DateTime date)
+        {
+            _inventoryList = new List<Inventory>();
+            var tasks = new List<Task>();
+            var dateWithZeroTime = new DateTime(date.Year, date.Month, date.Day, 0, 0, 0, 0);
+            var dateInString = $"'{dateWithZeroTime.ToString("yyyy-MM-dd HH:mm:ss.fff")}'";
+
+            using (OledbCon db = new OledbCon())
+            {
+                await db.OpenAsync();
+                var rowCount = await CountInventory(dateInString, db);
+
+                if(rowCount == 0) return _inventoryList;
+
+                var pageSize = (int)Math.Ceiling((double)rowCount / 5);
+                var totalPages = (int)Math.Ceiling((double)rowCount / pageSize);
+
+                for (int pageNumber = 0; pageNumber < totalPages; pageNumber++)
+                {
+                    int offset = pageSize * pageNumber;
+
+                    tasks.Add(GetInventories(dateInString.Replace("'", ""), pageSize, offset, db));
+                }
+
+                await Task.WhenAll(tasks);
+            }
+
+            return _inventoryList;
         }
     }
 }

@@ -25,11 +25,14 @@ namespace ads.Controllers
         [Route("ImportInventoryAndSales")]
         public async Task<IActionResult> Import(List<string> dates)
         {
-            foreach (var item in dates)
-            {
-                //await _invetory.GetInventoryAsync(item, item);
-/*                await _sales.GetSalesAsync(item, item);*/
-            }
+            //foreach (var item in dates)
+            //{
+            //    await _invetory.GetInventoryAsync(item, item);
+            //     await _sales.GetSalesAsync(item, item);
+
+            //}
+
+            await _ads.ComputeAds();
 
             return Ok();
         }

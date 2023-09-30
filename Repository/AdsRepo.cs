@@ -3,7 +3,11 @@ using ads.Interface;
 using ads.Models.Data;
 using ads.Utility;
 using Microsoft.Data.SqlClient;
+using Microsoft.IdentityModel.Tokens;
+using System.Collections.Generic;
 using System.Data;
+using System.Drawing.Printing;
+using System.Runtime.InteropServices;
 
 namespace ads.Repository
 {
@@ -13,15 +17,20 @@ namespace ads.Repository
         private readonly DateConvertion dateConvertion = new DateConvertion();
         private readonly LogsRepo localQuery = new LogsRepo();
         private readonly DateComputeUtility dateCompute = new DateComputeUtility();
+        public List<TotalADS> _totalAdsChain = new List<TotalADS>();
+        public List<TotalADS> _totalAdsClubs = new List<TotalADS>();
+
+
 
         private readonly ISales _sales;
         private readonly IInvetory _invetory;
+        private readonly IOpenQuery _openQuery;
 
-
-        public AdsRepo(ISales sales, IInvetory invetory)
+        public AdsRepo(ISales sales, IInvetory invetory, IOpenQuery openQuery)
         {
             _sales = sales;
             _invetory = invetory;
+            _openQuery = openQuery;
         }
 
 
@@ -34,7 +43,7 @@ namespace ads.Repository
 
             DateTime startLogs = DateTime.Now;
 
-            List<DataRows> listData = new List<DataRows>();
+            List<Sale> listData = new List<Sale>();
 
             DateTime currentDate = DateTime.Now;
 
@@ -42,7 +51,7 @@ namespace ads.Repository
             //string startDate = "230913";
 
 
-             DateTime startDate = Convert.ToDateTime(stringDate);
+            DateTime startDate = Convert.ToDateTime(stringDate);
             //DateTime startDate = Convert.ToDateTime("2023-05-22 00:00:00.000");
 
             //Date Ranges of Computation of 56 days
@@ -69,7 +78,7 @@ namespace ads.Repository
             return returnlist;
         }
 
-        public async Task<List<TotalADS>> GetTotalApdAsync(List<Inventory> listInventoryResult, List<DataRows> listSalesResult, string dateListString)
+        public async Task<List<TotalADS>> GetTotalApdAsync(List<Inventory> listInventoryResult, List<Sale> listSalesResult, string dateListString)
         {
             //Start Logs
             List<Logging> Log = new List<Logging>();
@@ -96,7 +105,7 @@ namespace ads.Repository
                                   {
                                       Clubs = x.Clubs,
                                       Sku = x.Sku,
-                                      Inventory = x.Inventory,
+                                      Inventory = y.Inv,
                                       Sales = (x.Sales > 0) ? x.Sales : 0,
                                       Date = x.Date
                                   });
@@ -280,14 +289,14 @@ namespace ads.Repository
 
         }
 
-        public async Task<List<TotalADS>> GetTotalSkuAndClubsAsync(List<Inventory> listInventoryResult, List<DataRows> listSalesResult, string dateListString)
+        public async Task<List<TotalADS>> GetTotalSkuAndClubsAsync(List<Inventory> listInventoryResult, List<Sale> listSalesResult, string dateListString)
         {
             //Start Logs
             List<Logging> Log = new List<Logging>();
 
             DateTime startLogs = DateTime.Now;
 
-            List<DataRows> listData = new List<DataRows>();
+            var listData = new List<DataRows>();
 
             string[] dateParts = dateListString.Split(',');
             string fistDatePart = dateParts.FirstOrDefault();
@@ -312,7 +321,7 @@ namespace ads.Repository
                      {
                          Clubs = x.Clubs,
                          Sku = x.Sku,
-                         Inventory = x.Inventory,
+                         Inventory = y.Inv,
                          Sales = (x.Sales > 0) ? x.Sales : 0,
                          Date = x.Date
                      });
@@ -492,6 +501,254 @@ namespace ads.Repository
 
                 return totalAPDs;
             }
+        }
+
+        public async Task ComputeAds()
+        {
+            _totalAdsChain = new List<TotalADS>();
+            var Log = new List<Logging>();
+            var listData = new List<Sale>();
+            var tasks = new List<Task>();
+            var skus = new List<string>();
+            var currentDate = DateTime.Now.AddDays(-1);
+            var dayZero = currentDate.AddDays(-55);
+            var CurrentDateWithZeroTime = new DateTime(currentDate.Year, currentDate.Month, currentDate.Day, 0, 0, 0, 0);
+            var dayZeroWithZeroTime = new DateTime(dayZero.Year, dayZero.Month, dayZero.Day, 0, 0, 0, 0);
+
+            //get all skus for chain
+
+            using (OledbCon db = new OledbCon())
+            {
+                await db.OpenAsync();
+
+                var sku = await _openQuery.ListOfAllSKu(db);
+                skus = sku.Select(x => x.INUMBR).ToList();
+            }
+
+            //sales for chain
+            var SalesToday = await _sales.GetSalesByDate(CurrentDateWithZeroTime); //to add
+            var salesDayZero = await _sales.GetSalesByDate(dayZeroWithZeroTime); // to subtract
+
+            //sales for clubs
+            var salesTodayWithoutNullClubs = SalesToday.Where(i => !i.Clubs.IsNullOrEmpty()).ToList();
+            var salesDayZeroWithoutNullClubs = salesDayZero.Where(i => !i.Clubs.IsNullOrEmpty()).ToList();
+
+            //getInventory today and dayzero
+            var inventoryToday = await _invetory.GetInventoriesByDate(CurrentDateWithZeroTime);
+            var inventoryDayZero = await _invetory.GetInventoriesByDate(dayZeroWithZeroTime);
+
+            var inventoryDayZeroWithoutNullClubs = inventoryDayZero.Where(i => !i.Clubs.IsNullOrEmpty()).ToList();
+            var inventoryTodayWithoutNullClubs = inventoryToday.Where(c => !c.Clubs.IsNullOrEmpty()).ToList();
+
+            //get the ads chain for yesterday
+            var totalAdsYesterdayChain = await GetCountAdsChainByDate($"'{CurrentDateWithZeroTime:yyyy-MM-dd HH:mm:ss.fff}'");
+
+            //var totalAdsYesterdayChain = await GetCountAdsChainByDate("'2023-05-15 00:00:00.000'");
+            //get ads per store
+            var totalAdsDayYesterdayClubs = await GetCountAdsByDate($"'{CurrentDateWithZeroTime:yyyy-MM-dd HH:mm:ss.fff}'");
+            //var totalAdsDayYesterdayClubs = await GetCountAdsByDate("'2023-05-15 00:00:00.000'");
+
+            // Get the total count of rows for your date filter
+            var pageSizeChain = (int)Math.Ceiling((double)totalAdsYesterdayChain / 5);
+            var totalPagesChain = (int)Math.Ceiling((double)totalAdsYesterdayChain / pageSizeChain);
+
+
+            for (int pageNumber = 0; pageNumber < totalPagesChain; pageNumber++)
+            {
+                int offset = pageSizeChain * pageNumber;
+
+                tasks.Add(GetAverageSalesChainByDate($"{CurrentDateWithZeroTime:yyyy-MM-dd HH:mm:ss.fff}", pageSizeChain, offset));
+                //tasks.Add( GetAverageSalesChainByDate("2023-05-15 00:00:00.000", pageSizeChain, offset));
+                //tasks.Add(GetAverageSalesChainByDate("230515", pageSizeChain, offset));
+            }
+
+            await Task.WhenAll(tasks);
+
+            var skuDictionary = skus.ToDictionary(x => x);
+            var chainDictionary = _totalAdsChain.ToDictionary(c => c.Sku, y => y);
+
+            var salesTotalDictionaryToday = _sales.GetDictionayOfTotalSales(SalesToday);
+
+            foreach (var sku in skus)
+            {
+                if (chainDictionary.TryGetValue(sku, out var ads))
+                {
+                    if (salesTotalDictionaryToday.TryGetValue(sku, out var totalSales))
+                    {
+                        ads.Sales = ads.Sales + totalSales;
+                    }
+                }
+            }
+
+            var pagesSizeClub = (int)Math.Ceiling((double)totalAdsDayYesterdayClubs / 5);
+            var totalPagesClub = (int)Math.Ceiling((double)totalAdsDayYesterdayClubs / pagesSizeClub);
+
+            for (int pageNumber = 0; pageNumber < pagesSizeClub; pageNumber++)
+            {
+                int offset = totalPagesClub * pageNumber;
+
+                tasks.Add(GetAverageSalesPerClubsByDate(CurrentDateWithZeroTime.ToString("yyMMdd"), pageSizeChain, offset));
+            }
+
+
+
+
+            //subtract sales of day zero
+            //same time check if it has sales and inventiory ----
+            //it has sales and inventory subtract if does not do nothing ---
+
+            //add sales of day zero
+            //same time check if it has sales and inventiory ----
+            //it has sales and inventory subtract if does not do nothing ---
+
+        }
+
+        private async Task<int> GetCountAdsChainByDate(string dateListString)
+        {
+            int totalCount = 0;
+
+            string query = "select COUNT(*) as Count from tbl_totalAds where StartDate in (" + dateListString + ") ";
+            using (OledbCon db = new OledbCon())
+            {
+                await db.OpenAsync();
+
+                using (SqlCommand cmd = new SqlCommand(query, db.Con))
+                {
+                    cmd.CommandTimeout = 18000;
+
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        if (reader.Read())
+                        {
+                            totalCount = Convert.ToInt32(reader["Count"].ToString());
+                        }
+                    }
+                }
+            }
+
+            return totalCount;
+        }
+        private async Task<int> GetCountAdsByDate(string dateListString)
+        {
+            int totalCount = 0;
+
+            string query = "select COUNT(*) as Count from tbl_totaladsperclubs where StartDate in (" + dateListString + ") ";
+            using (OledbCon db = new OledbCon())
+            {
+                await db.OpenAsync();
+
+                using (SqlCommand cmd = new SqlCommand(query, db.Con))
+                {
+                    cmd.CommandTimeout = 18000;
+
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        if (reader.Read())
+                        {
+                            totalCount = (int)reader["Count"];
+                        }
+                    }
+                }
+            }
+
+            return totalCount;
+        }
+
+
+        public async Task GetAverageSalesChainByDate(string dateListString, int pageSize, int offset)
+        {
+            string strConn = "data source='199.84.0.201';Initial Catalog=ADS.UAT;User Id=sa;password=@dm1n@8800;Trusted_Connection=false;MultipleActiveResultSets=true;TrustServerCertificate=True;";
+            var con = new SqlConnection(strConn);
+
+            await Task.Run(() =>
+            {
+                try
+                {
+                    using (var command = new SqlCommand("_sp_GetTblDataSample3", con))
+                    {
+                        command.CommandType = CommandType.StoredProcedure;
+                        command.Parameters.AddWithValue("@Offset", offset);
+                        command.Parameters.AddWithValue("@PageSize", pageSize);
+                        command.Parameters.AddWithValue("@dateListString", dateListString);
+                        command.CommandTimeout = 18000;
+                        var test1 = new List<TotalADS>();
+                        con.Open();
+
+                        // Open the connection and execute the command
+                        SqlDataReader reader = command.ExecuteReader();
+
+                        // Process the result set
+                        while (reader.Read())
+                        {
+                            var startDate = reader["StartDate"].ToString();
+
+                            var ads = new TotalADS
+                            {
+                                Sku = reader["Sku"].ToString(),
+                                Sales = Convert.ToDecimal(reader["Sales"].ToString()),
+                                Clubs = reader["Divisor"].ToString(),
+                                Ads = Convert.ToDecimal(reader["Ads"].ToString()),
+                                StartDate = startDate,
+                                EndDate = reader["EndDate"].ToString()
+                            };
+
+                            test1.Add(ads);
+                        }
+
+                        _totalAdsChain.AddRange(test1);
+                        reader.Close();
+                        con.Close();
+                    }
+                }
+                catch (Exception e)
+                {
+                    var test = e.Message;
+                }
+
+            });
+        }
+
+        public async Task GetAverageSalesPerClubsByDate(string dateListString, int pageSize, int offset)
+        {
+            string strConn = "data source='199.84.0.201';Initial Catalog=ADS.UAT;User Id=sa;password=@dm1n@8800;Trusted_Connection=false;MultipleActiveResultSets=true;TrustServerCertificate=True;";
+            var con = new SqlConnection(strConn);
+
+            await Task.Run(() =>
+            {
+                using (var command = new SqlCommand("_sp_GetTblDataSample4", con))
+                {
+                    command.CommandType = CommandType.StoredProcedure;
+                    command.Parameters.AddWithValue("@Offset", offset);
+                    command.Parameters.AddWithValue("@PageSize", pageSize);
+                    command.Parameters.AddWithValue("@dateListString", dateListString);
+                    command.CommandTimeout = 18000;
+                    con.Open();
+
+                    // Open the connection and execute the command
+                    SqlDataReader reader = command.ExecuteReader();
+
+                    // Process the result set
+                    while (reader.Read())
+                    {
+                        var startDate = reader.GetString("StartDate");
+
+                        var ads = new TotalADS
+                        {
+                            Sku = reader["Sku"].ToString(),
+                            Sales = Convert.ToDecimal(reader["Sales"].ToString()),
+                            Clubs = reader["Clubs"].ToString(),
+                            Ads = long.Parse(reader["Ads"].ToString()),
+                            StartDate = startDate,
+                            EndDate = reader.GetString("EndDate")
+                        };
+
+                        _totalAdsChain.Add(ads);
+                    }
+
+                    reader.Close();
+                    con.Close();
+                }
+            });
         }
     }
 }

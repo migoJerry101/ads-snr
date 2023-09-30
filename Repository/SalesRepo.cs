@@ -6,6 +6,7 @@ using Microsoft.Data.SqlClient;
 using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
+using System.Drawing.Printing;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 namespace ads.Repository
@@ -16,7 +17,8 @@ namespace ads.Repository
         private readonly ILogs _logs;
 
         private readonly DateConvertion dateConvertion = new DateConvertion();
-        private List<DataRows> _saleList = new List<DataRows>();
+        private List<Sale> _saleList = new List<Sale>();
+        private readonly DateComputeUtility dateCompute = new DateComputeUtility();
 
         public SalesRepo(IOpenQuery openQuery, ILogs logs)
         {
@@ -24,13 +26,13 @@ namespace ads.Repository
             _logs = logs;
         }
 
-        private List<DataRows> GenerateListOfDataRows(List<GeneralModel> datas, string sku, bool hasSales, bool useStartDate, string? date)
+        private List<Sale> GenerateListOfDataRows(List<GeneralModel> datas, string sku, bool hasSales, bool useStartDate, string? date)
         {
-            List<DataRows> listOfOledb = new List<DataRows>();
+            List<Sale> listOfOledb = new List<Sale>();
 
             foreach (var data in datas)
             {
-                var Olde = new DataRows
+                var Olde = new Sale
                 {
                     Sku = sku,
                     Clubs = data.CSSTOR ?? data.ISTORE,
@@ -45,15 +47,15 @@ namespace ads.Repository
         }
 
         //Get Sales
-        public async Task<List<DataRows>> GetSalesAsync(string start, string end, List<GeneralModel> skus, List<GeneralModel> listOfSales, List<GeneralModel> inventories)
+        public async Task<List<Sale>> GetSalesAsync(string start, string end, List<GeneralModel> skus, List<GeneralModel> listOfSales, List<GeneralModel> inventories)
         {
-            List<DataRows> transformedData = new List<DataRows>();
+            List<Sale> transformedData = new List<Sale>();
 
-            List<DataRows> listOfOledb = new List<DataRows>();
+            List<Sale> listOfOledb = new List<Sale>();
 
-            List<DataRows> listOfTBLSTR = new List<DataRows>();
+            List<Sale> listOfTBLSTR = new List<Sale>();
 
-            List<DataRows> listOfINVMST = new List<DataRows>();
+            List<Sale> listOfINVMST = new List<Sale>();
 
             List<Logging> Log = new List<Logging>();
 
@@ -78,7 +80,7 @@ namespace ads.Repository
                         {
                             foreach (var data in salesOut)
                             {
-                                var Olde = new DataRows
+                                var Olde = new Sale
                                 {
                                     Sku = sku.INUMBR,
                                     Clubs = data.CSSTOR,
@@ -99,7 +101,7 @@ namespace ads.Repository
                                 //var generatedList = GenerateListOfDataRows(inventoryOut, sku.INUMBR, true, true, start);
                                 foreach (var data in inventoryOut)
                                 {
-                                    var Olde = new DataRows
+                                    var Olde = new Sale
                                     {
                                         Sku = sku.INUMBR,
                                         Clubs = data.ISTORE,
@@ -116,7 +118,7 @@ namespace ads.Repository
                                 // this entry is in the master list of sku, but not yet part of sales and enventory table
                                 // this is used when computing chain/all store ADS
                                 // this is filtered out when computing ADS of per store per sku
-                                var Olde = new DataRows
+                                var Olde = new Sale
                                 {
                                     Sku = sku.INUMBR,
                                     Clubs = string.Empty,
@@ -224,7 +226,7 @@ namespace ads.Repository
                         while (reader.Read())
                         {
 
-                            DataRows Olde = new DataRows
+                            Sale Olde = new Sale
                             {
                                 Clubs = reader["Clubs"].ToString(),
                                 Sku = reader["Sku"].ToString(),
@@ -249,11 +251,11 @@ namespace ads.Repository
         }
 
         //list Data
-        public async Task<List<DataRows>> ListSales(string dateListString, OledbCon db)
+        public async Task<List<Sale>> ListSales(string dateListString, OledbCon db)
         {
-            List<DataRows> list = new List<DataRows>();
+            List<Sale> list = new List<Sale>();
             var tasks = new List<Task>();
-      /*      var pageSize = 5000*/;
+            _saleList = new List<Sale>();
 
             // Get the total count of rows for your date filter
             var rowCount = await CountSales(dateListString, db);
@@ -323,5 +325,46 @@ namespace ads.Repository
             return totalCount;
         }
 
+        public async Task<List<Sale>> GetSalesByDate(DateTime date)
+        {
+            List<Sale> list = new List<Sale>();
+            var tasks = new List<Task>();
+            _saleList = new List<Sale>();
+            var dateWithZeroTime = new DateTime(date.Year, date.Month, date.Day, 0, 0, 0, 0);
+            var dateInString = $"'{dateWithZeroTime.ToString("yyyy-MM-dd HH:mm:ss.fff")}'";
+
+            using (OledbCon db = new OledbCon())
+            {
+                await db.OpenAsync();
+                var rowCount = await CountSales(dateInString, db);
+
+                if (rowCount == 0) return _saleList;
+
+                var pageSize = (int)Math.Ceiling((double)rowCount / 5);
+                var totalPages = (int)Math.Ceiling((double)rowCount / pageSize);
+
+                for (int pageNumber = 0; pageNumber < totalPages; pageNumber++)
+                {
+                    int offset = pageSize * pageNumber;
+
+                    tasks.Add(GetAllSales(dateInString.Replace("'", ""), pageSize, offset, db));
+                }
+
+                await Task.WhenAll(tasks);
+
+            }
+
+            return _saleList;
+        }
+
+        public Dictionary<string, decimal> GetDictionayOfTotalSales(List<Sale> sales)
+        {
+            var salesDictionary = sales.GroupBy(x => x.Sku).ToDictionary(
+                 group => group.Key,
+                 group => group.Sum(item => item.Sales)
+             );
+
+            return salesDictionary;
+        }
     }
 }
