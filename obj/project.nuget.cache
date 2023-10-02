@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "yT0JN/qGB7/iVClg3+xIx3fmqKQGZrceN8Ta8hSrTmg8UPIG1pOnao0IviG7Za/XBM6/ZYvZ25cyGmJbUZaqsg==",
+  "dgSpecHash": "nFpbo3o8ga73M5Q6invgimlslofxVK/ptoBABqt2GceIUapfcuccIpzJ//+MZkJWL4lzZgK4J7fHkgXmF7bjmw==",
   "success": true,
-  "projectFilePath": "C:\\Users\\ralcaraz\\Videos\\ADS\\Ads-SNR - UpdateCode\\ads.csproj",
+  "projectFilePath": "C:\\Users\\ralcaraz\\Videos\\ADS\\Ads-SNR - UpdateCode - NewUpdate\\ads.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\ralcaraz\\.nuget\\packages\\azure.core\\1.25.0\\azure.core.1.25.0.nupkg.sha512",
     "C:\\Users\\ralcaraz\\.nuget\\packages\\azure.identity\\1.7.0\\azure.identity.1.7.0.nupkg.sha512",

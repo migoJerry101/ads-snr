@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\ralcaraz\\Videos\\ADS\\Ads-SNR - UpdateCode\\ads.csproj": {}
+    "C:\\Users\\ralcaraz\\Videos\\ADS\\Ads-SNR - UpdateCode - NewUpdate\\ads.csproj": {}
   },
   "projects": {
-    "C:\\Users\\ralcaraz\\Videos\\ADS\\Ads-SNR - UpdateCode\\ads.csproj": {
+    "C:\\Users\\ralcaraz\\Videos\\ADS\\Ads-SNR - UpdateCode - NewUpdate\\ads.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\ralcaraz\\Videos\\ADS\\Ads-SNR - UpdateCode\\ads.csproj",
+        "projectUniqueName": "C:\\Users\\ralcaraz\\Videos\\ADS\\Ads-SNR - UpdateCode - NewUpdate\\ads.csproj",
         "projectName": "ads",
-        "projectPath": "C:\\Users\\ralcaraz\\Videos\\ADS\\Ads-SNR - UpdateCode\\ads.csproj",
+        "projectPath": "C:\\Users\\ralcaraz\\Videos\\ADS\\Ads-SNR - UpdateCode - NewUpdate\\ads.csproj",
         "packagesPath": "C:\\Users\\ralcaraz\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\ralcaraz\\Videos\\ADS\\Ads-SNR - UpdateCode\\obj\\",
+        "outputPath": "C:\\Users\\ralcaraz\\Videos\\ADS\\Ads-SNR - UpdateCode - NewUpdate\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\ralcaraz\\AppData\\Roaming\\NuGet\\NuGet.Config",

@@ -57,6 +57,12 @@ namespace ads.Repository
 
             List<Logging> Log = new List<Logging>();
 
+            // Get the current date
+            DateTime currentDate = DateTime.Now;
+
+            // Subtract one day
+            DateTime previousDate = currentDate.AddDays(-1);
+
             DateTime startLogs = DateTime.Now;
 
             try
@@ -169,7 +175,7 @@ namespace ads.Repository
                     EndLog = endLogs,
                     Action = "Sales",
                     Message = "Total Rows Inserted : " + listOfOledb.Count + "",
-                    Record_Date = start
+                    Record_Date = previousDate.ToString("yyyy-MM-dd 00:00:00.000")
                 });
 
                 _logs.InsertLogs(Log);
@@ -185,7 +191,7 @@ namespace ads.Repository
                     EndLog = endLogs,
                     Action = "Error",
                     Message = "Sales : " + e.Message + " : Date : " + start + "",
-                    Record_Date = start
+                    Record_Date = previousDate.ToString("yyyy-MM-dd 00:00:00.000")
                 });
 
                 _logs.InsertLogs(Log);
@@ -217,6 +223,8 @@ namespace ads.Repository
                         command.CommandTimeout = 18000;
                         con.Open();
 
+                        var sales = new List<DataRows>();
+
                         // Open the connection and execute the command
                         SqlDataReader reader = command.ExecuteReader();
 
@@ -232,9 +240,10 @@ namespace ads.Repository
                                 Date = reader.GetDateTime("Date"),
                             };
 
-                            _saleList.Add(Olde);
+                            sales.Add(Olde);
                         }
 
+                        _saleList.AddRange(sales);
                         // Close the reader and connection
                         reader.Close();
                         con.Close();

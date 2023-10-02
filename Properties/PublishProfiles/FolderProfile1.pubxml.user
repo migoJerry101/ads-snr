@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+https://go.microsoft.com/fwlink/?LinkID=208121.
+-->
+<Project>
+  <PropertyGroup>
+    <_PublishTargetUrl>C:\Users\Public\DeployFiles-Reggie\AD\publish</_PublishTargetUrl>
+    <History>True|2023-09-30T09:50:46.1702726Z;True|2023-09-30T17:50:05.7495957+08:00;True|2023-09-30T17:29:51.1886661+08:00;True|2023-09-29T17:05:32.6298639+08:00;True|2023-09-29T17:01:59.0593846+08:00;True|2023-09-29T16:32:56.7343886+08:00;True|2023-09-29T15:37:07.7638281+08:00;True|2023-09-29T15:33:52.8058998+08:00;</History>
+    <LastFailureDetails />
+  </PropertyGroup>
+</Project>

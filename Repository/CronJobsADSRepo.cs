@@ -19,11 +19,14 @@ using static System.Net.WebRequestMethods;
 using System;
 using Azure.Core.GeoJson;
 using ads.Interface;
+using System.Drawing.Printing;
+using ads.Utility;
 //Final Code
 namespace ads.Repository
 {
     public class CronJobsADSRepo : IJob
     {
+        private readonly DateConvertion dateConvertion = new DateConvertion();
         private readonly IInvetory _inventory;
         private readonly ISales _sales;
         private readonly IAds _ads;
@@ -52,8 +55,8 @@ namespace ads.Repository
                 DateTime previousDate = currentDate.AddDays(-1);
 
                 ////////Actual Record or Final Setup
-                string startDate = previousDate.ToString("yyMMdd");
-                string endDate = previousDate.ToString("yyMMdd");
+                string startDate = currentDate.ToString("yyMMdd");
+                string endDate = currentDate.ToString("yyMMdd");
 
                 using (OledbCon db = new OledbCon())
                 {
@@ -68,7 +71,9 @@ namespace ads.Repository
 
                 }
 
-                //await _ads.GetComputation();
+                var convertstring = previousDate.ToString("yyyy-MM-dd 00:00:00.000");
+
+                await _ads.GetComputation(convertstring);
             }
             catch (Exception e)
             {

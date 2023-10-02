@@ -25,7 +25,7 @@ namespace ads.Repository
         }
 
 
-        public async Task<List<TotalADS>> GetComputation(string stringDate)
+        public async Task<List<TotalADS>> GetComputation(string? stringDate)
         {
             List<TotalADS> returnlist = new List<TotalADS>();
 
@@ -38,11 +38,16 @@ namespace ads.Repository
 
             DateTime currentDate = DateTime.Now;
 
+            DateTime startDate = DateTime.Now;
+
+            if (stringDate != string.Empty || stringDate != "" || stringDate != null)
+            {
+                 startDate = Convert.ToDateTime(stringDate);
+            }
+
             //var startDate = currentDate;
             //string startDate = "230913";
 
-
-             DateTime startDate = Convert.ToDateTime(stringDate);
             //DateTime startDate = Convert.ToDateTime("2023-05-22 00:00:00.000");
 
             //Date Ranges of Computation of 56 days
@@ -59,10 +64,15 @@ namespace ads.Repository
                 //list of Sales within 56 days in Local DB
                 var listSalesResult = await _sales.ListSales(dateListString, db);
 
+                //list of Inventory without clubs null 56 days in Local DB
+                var listInventoryWithOutNull = listInventoryResult.Where(x => x.Clubs != "").ToList();
+                //list of Sales without clubs null 56 days in Local DB
+                var listSalesWithOutNull = listSalesResult.Where(x => x.Clubs != "").ToList();
+
                 //Per SKU
-                await GetTotalApdAsync(listInventoryResult, listSalesResult, dateListString);
+                //await GetTotalApdAsync(listInventoryResult, listSalesResult, dateListString);
                 ////Per Store
-                await GetTotalSkuAndClubsAsync(listInventoryResult, listSalesResult, dateListString);
+                await GetTotalSkuAndClubsAsync(listInventoryWithOutNull, listSalesWithOutNull, dateListString);
 
             }
 
@@ -96,7 +106,7 @@ namespace ads.Repository
                                   {
                                       Clubs = x.Clubs,
                                       Sku = x.Sku,
-                                      Inventory = x.Inventory,
+                                      Inventory = y.Inv,
                                       Sales = (x.Sales > 0) ? x.Sales : 0,
                                       Date = x.Date
                                   });
@@ -175,8 +185,8 @@ namespace ads.Repository
                                 Ads = totalAPD,
                                 Date = lastDate,
                                 Sku = f.Sku.ToString(),
-                                StartDate = lastDate,
-                                EndDate = firstDate
+                                StartDate = firstDate,
+                                EndDate = lastDate
                             });
                         }
                         else
@@ -195,8 +205,8 @@ namespace ads.Repository
                                 Ads = 0,
                                 Date = lastDate,
                                 Sku = f.Sku.ToString(),
-                                StartDate = lastDate,
-                                EndDate = firstDate
+                                StartDate = firstDate,
+                                EndDate = lastDate
                             });
 
                         }
@@ -253,7 +263,7 @@ namespace ads.Repository
                         EndLog = endLogs,
                         Action = "Total ADS",
                         Message = "Total Sku Inserted : " + totalAPDs.Count() + "",
-                        Record_Date = lastDate
+                        Record_Date = firstDate
                     });
 
                     localQuery.InsertLogs(Log);
@@ -270,7 +280,7 @@ namespace ads.Repository
                     EndLog = endLogs,
                     Action = "Error",
                     Message = "Total Sku  : " + e.Message + "",
-                    Record_Date = lastDate
+                    Record_Date = firstDate
                 });
 
                 localQuery.InsertLogs(Log);
@@ -312,7 +322,7 @@ namespace ads.Repository
                      {
                          Clubs = x.Clubs,
                          Sku = x.Sku,
-                         Inventory = x.Inventory,
+                         Inventory = y.Inv,
                          Sales = (x.Sales > 0) ? x.Sales : 0,
                          Date = x.Date
                      });
@@ -467,7 +477,7 @@ namespace ads.Repository
                         EndLog = endLogs,
                         Action = "Total ADS",
                         Message = "Total Clubs Inserted : " + totalAPDs.Count() + "",
-                        Record_Date = lastDate
+                        Record_Date = firstDate
                     });
 
                     localQuery.InsertLogs(Log);
@@ -485,7 +495,7 @@ namespace ads.Repository
                     EndLog = endLogs,
                     Action = "Error",
                     Message = "Total Clubs : " + e.Message + "",
-                    Record_Date = lastDate
+                    Record_Date = firstDate
                 });
 
                 localQuery.InsertLogs(Log);

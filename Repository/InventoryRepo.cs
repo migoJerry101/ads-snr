@@ -25,6 +25,12 @@ namespace ads.Repository
         //Get Inventory
         public async Task<List<Inventory>> GetInventoryAsync(string start, string end, List<GeneralModel> skus, List<GeneralModel> sales, List<GeneralModel> inventory)
         {
+            // Get the current date
+            DateTime currentDate = DateTime.Now;
+
+            // Subtract one day
+            DateTime previousDate = currentDate.AddDays(-1);
+
             List<Inventory> ListCsDate = new List<Inventory>();
 
             List<Inventory> ListBal = new List<Inventory>();
@@ -136,7 +142,7 @@ namespace ads.Repository
                     EndLog = endLogs,
                     Action = "Inventory",
                     Message = "Total Rows Inserted : " + ListInventory.Count + "",
-                    Record_Date = start
+                    Record_Date = previousDate.ToString("yyyy-MM-dd 00:00:00.000")
                 });
 
                 _logs.InsertLogs(Log);
@@ -155,7 +161,7 @@ namespace ads.Repository
                     EndLog = endLogs,
                     Action = "Error",
                     Message = "Inventory : " + e.Message + " ",
-                    Record_Date = start
+                    Record_Date = previousDate.ToString("yyyy-MM-dd 00:00:00.000")
                 });
 
                 _logs.InsertLogs(Log);
@@ -166,6 +172,12 @@ namespace ads.Repository
 
         public async Task GetInventories(string dateListString, int pageSize, int offset, OledbCon db)
         {
+            // Get the current date
+            DateTime currentDate = DateTime.Now;
+
+            // Subtract one day
+            DateTime previousDate = currentDate.AddDays(-1);
+
             DateTime startLogs = DateTime.Now;
             List<Logging> Log = new List<Logging>();
             try
@@ -185,6 +197,8 @@ namespace ads.Repository
                         command.CommandTimeout = 18000;
                         con.Open();
 
+                        var inventories = new List<Inventory>();
+
                         // Open the connection and execute the command
                         SqlDataReader reader = command.ExecuteReader();
 
@@ -202,9 +216,11 @@ namespace ads.Repository
                                 Date = date,
                             };
 
-                            _inventoryList.Add(Olde);
+                            inventories.Add(Olde);
                         }
 
+
+                        _inventoryList.AddRange(inventories);
                         // Close the reader and connection
                         reader.Close();
                         con.Close();
@@ -250,7 +266,7 @@ namespace ads.Repository
                     EndLog = endLogs,
                     Action = "Error",
                     Message = "GetInventories : " + e.Message + " ",
-                    Record_Date = dateListString
+                    Record_Date = previousDate.ToString("yyyy-MM-dd 00:00:00.000")
                 });
 
                 _logs.InsertLogs(Log);

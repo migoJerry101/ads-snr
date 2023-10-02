@@ -9,7 +9,7 @@ namespace ads.Utility
         {
             List<string> listDate = new List<string>();
 
-            DateTime endDate = startDate.AddDays(-15);
+            DateTime endDate = startDate.AddDays(-3);
             //DateTime endDate = startDate.AddDays(-55);
 
             // Iterate through the date range
