@@ -68,7 +68,7 @@ namespace ads.Repository
 
                 }
 
-                //await _ads.GetComputation();
+                await _ads.ComputeAds();
             }
             catch (Exception e)
             {

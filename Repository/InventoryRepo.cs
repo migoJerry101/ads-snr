@@ -183,6 +183,7 @@ namespace ads.Repository
                         command.Parameters.AddWithValue("@PageSize", pageSize);
                         command.Parameters.AddWithValue("@dateListString", dateListString);
                         command.CommandTimeout = 18000;
+                        var inventories = new List<Inventory>();
                         con.Open();
 
                         // Open the connection and execute the command
@@ -202,9 +203,10 @@ namespace ads.Repository
                                 Date = date,
                             };
 
-                            _inventoryList.Add(Olde);
+                            inventories.Add(Olde);
                         }
 
+                        _inventoryList.AddRange(inventories);
                         // Close the reader and connection
                         reader.Close();
                         con.Close();
@@ -362,6 +364,16 @@ namespace ads.Repository
             }
 
             return _inventoryList;
+        }
+
+        public Dictionary<string, decimal> GetDictionayOfTotalInventory(List<Inventory> inventories)
+        {
+            var inventoryDictionary = inventories.GroupBy(x => x.Sku).ToDictionary(
+                group => group.Key,
+                group => group.Sum(item => item.Inv)
+            );
+
+            return inventoryDictionary;
         }
     }
 }

@@ -218,6 +218,7 @@ namespace ads.Repository
                         command.Parameters.AddWithValue("@dateListString", dateListString);
                         command.CommandTimeout = 18000;
                         con.Open();
+                        var sales = new List<Sale>();
 
                         // Open the connection and execute the command
                         SqlDataReader reader = command.ExecuteReader();
@@ -234,9 +235,10 @@ namespace ads.Repository
                                 Date = reader.GetDateTime("Date"),
                             };
 
-                            _saleList.Add(Olde);
+                            sales.Add(Olde);
                         }
 
+                        _saleList.AddRange(sales);
                         // Close the reader and connection
                         reader.Close();
                         con.Close();

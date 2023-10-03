@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using Microsoft.SqlServer.Server;
+using System.Globalization;
 
 namespace ads.Utility
 {
@@ -32,6 +33,16 @@ namespace ads.Utility
             }
 
             return datesInRange;
+        }
+
+        public int GetDifferenceInRange(string startDate, string endDate)
+        {
+            string format = "yyyy-MM-dd HH:mm:ss.fff";
+            DateTime.TryParseExact(startDate, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime startDateCheckOut);
+            DateTime.TryParseExact(endDate, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime endDateCheckOut);
+            TimeSpan differenceOut = startDateCheckOut - endDateCheckOut;
+
+            return differenceOut.Days;
         }
     }
 }

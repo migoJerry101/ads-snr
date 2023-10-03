@@ -10,6 +10,6 @@ namespace ads.Interface
         string TotalInventory(string startDate, string endDate);
         Task<int> CountInventory(string dateListString, OledbCon db);
         Task<List<Inventory>> GetInventoriesByDate(DateTime date);
-
+        Dictionary<string, decimal> GetDictionayOfTotalInventory(List<Inventory> inventories);
     }
 }
