@@ -578,8 +578,8 @@ namespace ads.Repository
             var totalAdsDayYesterdayClubs = await GetCountAdsByDate($"'{adsStartDate:yyyy-MM-dd HH:mm:ss.fff}'");
 
 
-            var skuDictionary = skus.ToDictionary(x => x);
-            var chainDictionary = _totalAdsChain.ToDictionary(c => c.Sku, y => y);
+            var skuDictionary = skus.Distinct().ToDictionary(x => x);
+            var chainDictionary = _totalAdsChain.Distinct().ToDictionary(c => c.Sku, y => y);
 
             var salesTotalDictionaryToday = _sales.GetDictionayOfTotalSales(SalesToday);
             var salesTotalDictionaryDayZero = _sales.GetDictionayOfTotalSales(salesDayZero);
@@ -600,10 +600,6 @@ namespace ads.Repository
                 {
                     var hasSales = salesTotalDictionaryDayZero.TryGetValue(sku, out var totalSalesOut);
                     var hasInventory = inventoryTodayDictionaryDayZero.TryGetValue(sku, out var totalInvOut);
-                    if (sku == "142077")
-                    {
-                        var test = 1;
-                    }
 
                     var daysDifferenceOut = dateCompute.GetDifferenceInRange(ads.StartDate, ads.EndDate);
 
@@ -629,11 +625,6 @@ namespace ads.Repository
             {
                 var hasSales = salesTotalDictionaryToday.TryGetValue(sku, out var totalSalesOut);
                 var hasInventory = inventoryTotalDictionaryToday.TryGetValue(sku, out var totalInvOut);
-
-                if(sku == "142077")
-                {
-                    var test = 1;
-                }
 
                 if (adsWithCurrentsalesDictionary.TryGetValue(sku, out var ads))
                 {
@@ -981,7 +972,6 @@ namespace ads.Repository
                             {
                                 Sku = reader["Sku"].ToString(),
                                 Sales = Convert.ToDecimal(reader["Sales"].ToString()),
-                                Clubs = reader["Divisor"].ToString(),
                                 Ads = Convert.ToDecimal(reader["Ads"].ToString()),
                                 Divisor = Convert.ToInt32(reader["Divisor"].ToString()),
                                 StartDate = startDate,

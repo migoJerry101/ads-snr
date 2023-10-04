@@ -46,7 +46,7 @@ namespace ads.Repository
             List<GeneralModel> list = new List<GeneralModel>();
 
             //string query = "select * from Openquery([snr], 'SELECT CSSKU, CSDATE, MAX(CSSTOR) CSSTOR, SUM(CSQTY) CSQTY from MMJDALIB.CSHDET where CSDATE BETWEEN ''" + start + "'' AND ''" + end + "'' GROUP BY CSSKU ,CSDATE ')";
-            string query = "select * from Openquery([snr], 'SELECT CSSKU, CSDATE, CSSTOR, SUM(CSQTY) CSQTY from MMJDALIB.CSHDET where CSDATE BETWEEN ''" + start + "'' AND ''" + end + "'' GROUP BY CSSKU, CSSTOR ,CSDATE ')";
+            string query = "select * from Openquery([snr], 'SELECT CSSKU, CSDATE, CSSTOR, CASE WHEN SUM(CSQTY) < 0 THEN 0 ELSE SUM(CSQTY) END AS CSQTY from MMJDALIB.CSHDET where CSDATE BETWEEN ''" + start + "'' AND ''" + end + "'' GROUP BY CSSKU, CSSTOR ,CSDATE ')";
 
             using (SqlCommand cmd = new SqlCommand(query, db.Con))
             {

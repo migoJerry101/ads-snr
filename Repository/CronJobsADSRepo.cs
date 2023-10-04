@@ -49,7 +49,7 @@ namespace ads.Repository
                 DateTime currentDate = DateTime.Now;
 
                 // Subtract one day
-                DateTime previousDate = currentDate.AddDays(-4);
+                DateTime previousDate = currentDate.AddDays(-1);
 
                 ////////Actual Record or Final Setup
                 string startDate = previousDate.ToString("yyMMdd");
