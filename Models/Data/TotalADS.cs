@@ -3,7 +3,7 @@
     public class TotalADS
     {
         public int Divisor { get; set; }
-        public long Ads { get; set; }
+        public decimal Ads { get; set; }
         public string? Sku { get; set; }
         public string? Clubs { get; set; }
         public decimal Sales { get; set; }

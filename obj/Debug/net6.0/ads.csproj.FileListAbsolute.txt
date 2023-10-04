@@ -449,3 +449,9 @@ C:\Users\ralcaraz\Videos\ADS\Ads-SNR - UpdateCode\obj\Debug\net6.0\refint\ads.dl
 C:\Users\ralcaraz\Videos\ADS\Ads-SNR - UpdateCode\obj\Debug\net6.0\ads.pdb
 C:\Users\ralcaraz\Videos\ADS\Ads-SNR - UpdateCode\obj\Debug\net6.0\ads.genruntimeconfig.cache
 C:\Users\ralcaraz\Videos\ADS\Ads-SNR - UpdateCode\obj\Debug\net6.0\ref\ads.dll
+C:\Users\jbayoneta\Documents\Projects\dotnet\ads-snr\bin\Debug\net6.0\System.Data.SqlClient.dll
+C:\Users\jbayoneta\Documents\Projects\dotnet\ads-snr\bin\Debug\net6.0\runtimes\win-arm64\native\sni.dll
+C:\Users\jbayoneta\Documents\Projects\dotnet\ads-snr\bin\Debug\net6.0\runtimes\win-x64\native\sni.dll
+C:\Users\jbayoneta\Documents\Projects\dotnet\ads-snr\bin\Debug\net6.0\runtimes\win-x86\native\sni.dll
+C:\Users\jbayoneta\Documents\Projects\dotnet\ads-snr\bin\Debug\net6.0\runtimes\unix\lib\netcoreapp2.1\System.Data.SqlClient.dll
+C:\Users\jbayoneta\Documents\Projects\dotnet\ads-snr\bin\Debug\net6.0\runtimes\win\lib\netcoreapp2.1\System.Data.SqlClient.dll
