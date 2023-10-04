@@ -1,6 +1,8 @@
 using Quartz;
 using ads.Repository;
 using ads.Interface;
+using Microsoft.EntityFrameworkCore;
+using ads.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +16,8 @@ builder.Services.AddScoped<ILogs, LogsRepo>();
 builder.Services.AddScoped<IImportInventory, ImportInventoryRepo>();
 
 builder.Services.AddScoped<IAdsBackGroundTask, AdsBackGroundTaskRepo>();
+builder.Services.AddScoped<ITotalAdsChain, TotalAdsChainRepo>();
+builder.Services.AddScoped<ITotalAdsClub, TotalAdsClubRepo>();
 
 //Quartz run for cronjob
 builder.Services.AddQuartz(q =>
@@ -63,6 +67,10 @@ builder.Services.AddCors(options =>
                 .AllowCredentials();
     });
 });
+
+builder.Services.AddDbContext<AdsContex>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DatabaseConnection")
+    ));
 
 var app = builder.Build();
 

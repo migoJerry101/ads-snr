@@ -6,6 +6,6 @@ namespace ads.Interface
     {
         Task<List<Sale>> GetDataAsync(string start , string end);
         Task<List<Inventory>> GetInventoryAsync(string start, string end);
-        Task<List<TotalADS>> GetTotalApdAsync(string start);
+        Task<List<TotalAdsChain>> GetTotalApdAsync(string start);
     }
 }
