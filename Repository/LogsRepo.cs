@@ -30,7 +30,7 @@ namespace ads.Repository
                                 EndLog = Convert.ToDateTime(reader["EndLogs"].ToString()),
                                 Action = reader["Action"].ToString(),
                                 Message = reader["Message"].ToString(),
-                                Record_Date = reader["Record_Date"].ToString(),
+                                Record_Date = Convert.ToDateTime(reader["Record_Date"].ToString()),
                             };
 
                             logs.Add(Olde);
