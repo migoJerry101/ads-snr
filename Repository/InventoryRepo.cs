@@ -168,6 +168,8 @@ namespace ads.Repository
         {
             DateTime startLogs = DateTime.Now;
             List<Logging> Log = new List<Logging>();
+
+            DateTime previousDate = startLogs.AddDays(-1);
             try
             {
                 await Task.Run(() =>
@@ -252,7 +254,7 @@ namespace ads.Repository
                     EndLog = endLogs,
                     Action = "Error",
                     Message = "GetInventories : " + e.Message + " ",
-                    Record_Date = dateConvertion.ConvertStringDate(dateListString)  
+                    Record_Date = dateConvertion.ConvertStringDate(previousDate.ToString("yyyy-MM-dd 00:00:00.000"))  
                 });
 
                 _logs.InsertLogs(Log);

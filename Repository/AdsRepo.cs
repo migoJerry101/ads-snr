@@ -60,7 +60,6 @@ namespace ads.Repository
             string dateListString = string.Join(",", dateCompute.DateCompute(startDate).Select(date => $"'{date}'"));
             dateListString = dateListString.TrimEnd(',');
 
-
             using (OledbCon db = new OledbCon())
             {
                 await db.OpenAsync();
@@ -185,8 +184,8 @@ namespace ads.Repository
                                 Sales = salesOut,
                                 Ads = totalAPD,
                                 Sku = f.Sku.ToString(),
-                                StartDate = lastDate,
-                                EndDate = firstDate
+                                StartDate = firstDate,
+                                EndDate = lastDate
                             });
                         }
                         else
@@ -204,8 +203,8 @@ namespace ads.Repository
                                 Sales = 0,
                                 Ads = 0,
                                 Sku = f.Sku.ToString(),
-                                StartDate = lastDate,
-                                EndDate = firstDate
+                                StartDate = firstDate,
+                                EndDate = lastDate
                             });
 
                         }
@@ -262,7 +261,7 @@ namespace ads.Repository
                         EndLog = endLogs,
                         Action = "Total ADS",
                         Message = "Total Sku Inserted : " + totalAPDs.Count() + "",
-                        Record_Date = dateConvertion.ConvertStringDate(lastDate)
+                        Record_Date = dateConvertion.ConvertStringDate(firstDate)
                     });
 
                     localQuery.InsertLogs(Log);
@@ -279,7 +278,7 @@ namespace ads.Repository
                     EndLog = endLogs,
                     Action = "Error",
                     Message = "GetTotalApdAsync  : " + e.Message + "",
-                    Record_Date = dateConvertion.ConvertStringDate(lastDate)
+                    Record_Date = dateConvertion.ConvertStringDate(firstDate)
                 });
 
                 localQuery.InsertLogs(Log);
@@ -404,8 +403,8 @@ namespace ads.Repository
                                 Ads = totalAPD,
                                 Sku = f.Sku,
                                 Clubs = f.Clubs,
-                                StartDate = lastDate,
-                                EndDate = firstDate
+                                StartDate = firstDate,
+                                EndDate = lastDate
                             });
                         }
                         else
@@ -417,8 +416,8 @@ namespace ads.Repository
                                 Ads = 0,
                                 Sku = f.Sku,
                                 Clubs = f.Clubs,
-                                StartDate = lastDate,
-                                EndDate = firstDate
+                                StartDate = firstDate,
+                                EndDate = lastDate
                             });
                         }
                     }
@@ -491,7 +490,7 @@ namespace ads.Repository
                     EndLog = endLogs,
                     Action = "Error",
                     Message = "GetTotalSkuAndClubsAsync : " + e.Message + "",
-                    Record_Date = dateConvertion.ConvertStringDate(lastDate)
+                    Record_Date = dateConvertion.ConvertStringDate(firstDate)
                 });
 
                 localQuery.InsertLogs(Log);
@@ -520,226 +519,247 @@ namespace ads.Repository
             //var totalAdsYesterdayChain = await GetCountAdsChainByDate("'2023-05-15 00:00:00.000'");
             var totalAdsYesterdayChain = await GetCountAdsChainByDate($"'{adsStartDate:yyyy-MM-dd HH:mm:ss.fff}'");
 
+            //Star logs Date Time
+            DateTime startLogs = DateTime.Now;
 
-            // Get the total count of rows for your date filter
-            var pageSizeChain = (int)Math.Ceiling((double)totalAdsYesterdayChain / 5);
-            var totalPagesChain = (int)Math.Ceiling((double)totalAdsYesterdayChain / pageSizeChain);
-
-            for (int pageNumber = 0; pageNumber < totalPagesChain; pageNumber++)
+            try
             {
-                int offset = pageSizeChain * pageNumber;
+                // Get the total count of rows for your date filter
+                var pageSizeChain = (int)Math.Ceiling((double)totalAdsYesterdayChain / 5);
+                var totalPagesChain = (int)Math.Ceiling((double)totalAdsYesterdayChain / pageSizeChain);
 
-                tasks.Add(GetAverageSalesChainByDate($"{adsStartDate:yyyy-MM-dd HH:mm:ss.fff}", pageSizeChain, offset));
-                //tasks.Add( GetAverageSalesChainByDate("2023-05-15 00:00:00.000", pageSizeChain, offset));
-            }
-
-            await Task.WhenAll(tasks);
-
-            //get one sample from ads chain then get start and end date
-            var adsDayZeor = _totalAdsChain[0].EndDate;
-            var startDate = _totalAdsChain[0].StartDate;
-            string format = "yyyy-MM-dd HH:mm:ss.fff";
-            DateTime.TryParseExact(startDate, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime startDateOut);
-            DateTime.TryParseExact(adsDayZeor, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime endDateOut);
-            TimeSpan difference = startDateOut - endDateOut;
-            var daysDifference = difference.Days;
-
-            using (OledbCon db = new OledbCon())
-            {
-                await db.OpenAsync();
-
-                var sku = await _openQuery.ListOfAllSKu(db);
-                skus = sku.Select(x => x.INUMBR).ToList();
-            }
-
-            //sales for chain
-            var SalesToday = await _sales.GetSalesByDate(CurrentDateWithZeroTime); //to add
-            var salesDayZero = await _sales.GetSalesByDate(endDateOut); // to subtract
-
-            //sales for clubs
-            var salesTodayWithoutNullClubs = SalesToday.Where(i => !i.Clubs.IsNullOrEmpty()).ToList();
-            var salesDayZeroWithoutNullClubs = salesDayZero.Where(i => !i.Clubs.IsNullOrEmpty()).ToList();
-
-            //getInventory today and dayzero
-            var inventoryToday = await _invetory.GetInventoriesByDate(CurrentDateWithZeroTime);
-            var inventoryDayZero = await _invetory.GetInventoriesByDate(endDateOut);
-
-            var inventoryDayZeroWithoutNullClubs = inventoryDayZero.Where(i => !i.Clubs.IsNullOrEmpty()).ToList();
-            var inventoryTodayWithoutNullClubs = inventoryToday.Where(c => !c.Clubs.IsNullOrEmpty()).ToList();
-
-            //get ads per store
-            var totalAdsDayYesterdayClubs = await GetCountAdsByDate($"'{adsStartDate:yyyy-MM-dd HH:mm:ss.fff}'");
-
-
-            var skuDictionary = skus.Distinct().ToDictionary(x => x);
-            var chainDictionary = _totalAdsChain.Distinct().ToDictionary(c => c.Sku, y => y);
-
-            var salesTotalDictionaryToday = _sales.GetDictionayOfTotalSales(SalesToday);
-            var salesTotalDictionaryDayZero = _sales.GetDictionayOfTotalSales(salesDayZero);
-
-            var inventoryTotalDictionaryToday = _invetory.GetDictionayOfTotalInventory(inventoryToday);
-            var inventoryTodayDictionaryDayZero = _invetory.GetDictionayOfTotalInventory(inventoryDayZero);
-
-            var adsWithCurrentsales = new List<TotalAdsChain>();
-
-
-            var startDateInString = $"{CurrentDateWithZeroTime:yyyy-MM-dd HH:mm:ss.fff}";
-            var endDateInString = $"{endDateOut:yyyy-MM-dd HH:mm:ss.fff}";
-
-
-            foreach (var sku in skus)
-            {
-                if (chainDictionary.TryGetValue(sku, out var ads))
+                for (int pageNumber = 0; pageNumber < totalPagesChain; pageNumber++)
                 {
-                    var hasSales = salesTotalDictionaryDayZero.TryGetValue(sku, out var totalSalesOut);
-                    var hasInventory = inventoryTodayDictionaryDayZero.TryGetValue(sku, out var totalInvOut);
+                    int offset = pageSizeChain * pageNumber;
 
-                    var daysDifferenceOut = dateCompute.GetDifferenceInRange(ads.StartDate, ads.EndDate);
+                    tasks.Add(GetAverageSalesChainByDate($"{adsStartDate:yyyy-MM-dd HH:mm:ss.fff}", pageSizeChain, offset));
+                    //tasks.Add( GetAverageSalesChainByDate("2023-05-15 00:00:00.000", pageSizeChain, offset));
+                }
 
-                    if (daysDifferenceOut == 56)
+                await Task.WhenAll(tasks);
+
+                //get one sample from ads chain then get start and end date
+                var adsDayZeor = _totalAdsChain[0].EndDate;
+                var startDate = _totalAdsChain[0].StartDate;
+                string format = "yyyy-MM-dd HH:mm:ss.fff";
+                DateTime.TryParseExact(startDate, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime startDateOut);
+                DateTime.TryParseExact(adsDayZeor, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime endDateOut);
+                TimeSpan difference = startDateOut - endDateOut;
+                var daysDifference = difference.Days;
+
+                using (OledbCon db = new OledbCon())
+                {
+                    await db.OpenAsync();
+
+                    var sku = await _openQuery.ListOfAllSKu(db);
+                    skus = sku.Select(x => x.INUMBR).ToList();
+                }
+
+                //sales for chain
+                var SalesToday = await _sales.GetSalesByDate(CurrentDateWithZeroTime); //to add
+                var salesDayZero = await _sales.GetSalesByDate(endDateOut); // to subtract
+
+                //sales for clubs
+                var salesTodayWithoutNullClubs = SalesToday.Where(i => !i.Clubs.IsNullOrEmpty()).ToList();
+                var salesDayZeroWithoutNullClubs = salesDayZero.Where(i => !i.Clubs.IsNullOrEmpty()).ToList();
+
+                //getInventory today and dayzero
+                var inventoryToday = await _invetory.GetInventoriesByDate(CurrentDateWithZeroTime);
+                var inventoryDayZero = await _invetory.GetInventoriesByDate(endDateOut);
+
+                var inventoryDayZeroWithoutNullClubs = inventoryDayZero.Where(i => !i.Clubs.IsNullOrEmpty()).ToList();
+                var inventoryTodayWithoutNullClubs = inventoryToday.Where(c => !c.Clubs.IsNullOrEmpty()).ToList();
+
+                //get ads per store
+                var totalAdsDayYesterdayClubs = await GetCountAdsByDate($"'{adsStartDate:yyyy-MM-dd HH:mm:ss.fff}'");
+
+
+                var skuDictionary = skus.Distinct().ToDictionary(x => x);
+                var chainDictionary = _totalAdsChain.Distinct().ToDictionary(c => c.Sku, y => y);
+
+                var salesTotalDictionaryToday = _sales.GetDictionayOfTotalSales(SalesToday);
+                var salesTotalDictionaryDayZero = _sales.GetDictionayOfTotalSales(salesDayZero);
+
+                var inventoryTotalDictionaryToday = _invetory.GetDictionayOfTotalInventory(inventoryToday);
+                var inventoryTodayDictionaryDayZero = _invetory.GetDictionayOfTotalInventory(inventoryDayZero);
+
+                var adsWithCurrentsales = new List<TotalAdsChain>();
+
+
+                var startDateInString = $"{CurrentDateWithZeroTime:yyyy-MM-dd HH:mm:ss.fff}";
+                var endDateInString = $"{endDateOut:yyyy-MM-dd HH:mm:ss.fff}";
+
+
+                foreach (var sku in skus)
+                {
+                    if (chainDictionary.TryGetValue(sku, out var ads))
                     {
-                        var newEndDate = endDateOut.AddDays(1);
-                        var endDateInStringNew = $"{newEndDate:yyyy-MM-dd HH:mm:ss.fff}";
+                        var hasSales = salesTotalDictionaryDayZero.TryGetValue(sku, out var totalSalesOut);
+                        var hasInventory = inventoryTodayDictionaryDayZero.TryGetValue(sku, out var totalInvOut);
 
+                        var daysDifferenceOut = dateCompute.GetDifferenceInRange(ads.StartDate, ads.EndDate);
+
+                        if (daysDifferenceOut == 56)
+                        {
+                            var newEndDate = endDateOut.AddDays(1);
+                            var endDateInStringNew = $"{newEndDate:yyyy-MM-dd HH:mm:ss.fff}";
+
+                            if (totalSalesOut > 0 || totalInvOut > 0)
+                            {
+                                ads.Sales -= totalSalesOut;
+                                ads.Divisor--;
+                                ads.EndDate = endDateInStringNew;
+                            }
+                        }
+
+                        adsWithCurrentsales.Add(ads);
+                    }
+                }
+
+                var adsWithCurrentsalesDictionary = adsWithCurrentsales.ToDictionary(x => x.Sku, y => y);
+
+                adsWithCurrentsales = new List<TotalAdsChain>();
+
+                foreach (var sku in skus)
+                {
+                    var hasSales = salesTotalDictionaryToday.TryGetValue(sku, out var totalSalesOut);
+                    var hasInventory = inventoryTotalDictionaryToday.TryGetValue(sku, out var totalInvOut);
+
+                    if (adsWithCurrentsalesDictionary.TryGetValue(sku, out var ads))
+                    {
                         if (totalSalesOut > 0 || totalInvOut > 0)
                         {
-                            ads.Sales -= totalSalesOut;
-                            ads.Divisor--;
-                            ads.EndDate = endDateInStringNew;
+                            ads.Sales += totalSalesOut;
+                            ads.Divisor++;
+                            ads.Ads = Math.Round(ads.Sales / ads.Divisor, 2);
                         }
+
+                        ads.StartDate = startDateInString;
+
+                        adsWithCurrentsales.Add(ads);
                     }
-
-                    adsWithCurrentsales.Add(ads);
-                }
-            }
-
-            var adsWithCurrentsalesDictionary = adsWithCurrentsales.ToDictionary(x => x.Sku, y => y);
-
-            adsWithCurrentsales = new List<TotalAdsChain>();
-
-            foreach (var sku in skus)
-            {
-                var hasSales = salesTotalDictionaryToday.TryGetValue(sku, out var totalSalesOut);
-                var hasInventory = inventoryTotalDictionaryToday.TryGetValue(sku, out var totalInvOut);
-
-                if (adsWithCurrentsalesDictionary.TryGetValue(sku, out var ads))
-                {
-                    if (totalSalesOut > 0 || totalInvOut > 0)
+                    else
                     {
-                        ads.Sales += totalSalesOut;
-                        ads.Divisor++;
-                        ads.Ads = Math.Round(ads.Sales / ads.Divisor, 2);
-                    }
-
-                    ads.StartDate = startDateInString;
-
-                    adsWithCurrentsales.Add(ads);
-                }
-                else
-                {
-                    var newAds = new TotalAdsChain()
-                    {
-                        Divisor = 0,
-                        Sales = 0,
-                        Ads = 0,
-                        Sku = sku,
-                        StartDate = startDateInString,
-                        EndDate = startDateInString
-                    };
-
-                    adsWithCurrentsales.Add(newAds);
-                }
-            }
-
-            await SaveTotalAdsChain(adsWithCurrentsales, endDateInString);
-
-            var pagesSizeClub = (int)Math.Ceiling((double)totalAdsDayYesterdayClubs / 5);
-            var totalPagesClub = (int)Math.Ceiling((double)totalAdsDayYesterdayClubs / pagesSizeClub);
-
-            for (int pageNumber = 0; pageNumber < totalPagesClub; pageNumber++)
-            {
-                int offset = pagesSizeClub * pageNumber;
-
-                tasksPerClubs.Add(GetAverageSalesPerClubsByDate($"{CurrentDateWithZeroTime:yyyy-MM-dd HH:mm:ss.fff}", pagesSizeClub, offset));
-            }
-
-            await Task.WhenAll(tasksPerClubs);
-
-            //create dictionary of perclubs with key clubs + sku
-            var totalAdsClubDictionary = _totalAdsClubs.ToDictionary(x => new { x.Sku, x.Clubs });
-
-            var salesTodayWithoutNullClubsDictionary = salesTodayWithoutNullClubs.GroupBy(x => new { x.Sku, x.Clubs }).ToDictionary(group => group.Key, group => group.Sum(y => y.Sales));
-            var salesDayZeroWithoutNullClubsDictionary = salesDayZeroWithoutNullClubs.GroupBy(x => new { x.Sku, x.Clubs }).ToDictionary(group => group.Key, group => group.Sum(y => y.Sales));
-
-            var inventoryDayZeroWithoutNullClubsDictionary = inventoryDayZeroWithoutNullClubs.ToDictionary(x => new { x.Sku, x.Clubs }, y => y.Inv);
-            //var inventoryTodayWithoutNullClubsDictionary = inventoryTodayWithoutNullClubs.ToDictionary(x => new { x.Sku, x.Clubs }, y => y.Inv);
-
-            var adsPerClubsWithCurrentsales = new List<TotalAdsClub>();
-
-            foreach (var inv in inventoryTodayWithoutNullClubs)
-            {
-                var hasAds = totalAdsClubDictionary.TryGetValue(new { inv.Sku, inv.Clubs }, out var adsOut);
-                salesTodayWithoutNullClubsDictionary.TryGetValue(new { inv.Sku, inv.Clubs }, out var perClubSalesToday);
-
-                if (hasAds)
-                {
-                    var daysDifferenceOut = dateCompute.GetDifferenceInRange(adsOut.StartDate, adsOut.EndDate);
-
-                    if (daysDifferenceOut == 56)
-                    {
-                        salesDayZeroWithoutNullClubsDictionary.TryGetValue(new { inv.Sku, inv.Clubs }, out var perClubSalesDayZero);
-                        inventoryDayZeroWithoutNullClubsDictionary.TryGetValue(new { inv.Sku, inv.Clubs }, out var perClubInvDayZero);
-
-                        var newEndDate = endDateOut.AddDays(1);
-                        var endDateInStringNew = $"{newEndDate:yyyy-MM-dd HH:mm:ss.fff}";
-
-                        if (perClubSalesDayZero > 0 || perClubInvDayZero > 0)
+                        var newAds = new TotalAdsChain()
                         {
-                            adsOut.Sales -= perClubSalesDayZero;
-                            adsOut.Divisor--;
-                            adsOut.EndDate = endDateInStringNew;
-                        }
-                    }
+                            Divisor = 0,
+                            Sales = 0,
+                            Ads = 0,
+                            Sku = sku,
+                            StartDate = startDateInString,
+                            EndDate = startDateInString
+                        };
 
-                    if (perClubSalesToday > 0 || inv.Inv > 0)
-                    {
-                        adsOut.Sales += perClubSalesToday;
-                        adsOut.Divisor++;
-                        adsOut.StartDate = startDateInString;
-                        adsOut.Ads = Math.Round(adsOut.Sales / adsOut.Divisor, 2);
+                        adsWithCurrentsales.Add(newAds);
                     }
-
-                    adsPerClubsWithCurrentsales.Add(adsOut);
                 }
-                else
+
+                await SaveTotalAdsChain(adsWithCurrentsales, endDateInString);
+
+                var pagesSizeClub = (int)Math.Ceiling((double)totalAdsDayYesterdayClubs / 5);
+                var totalPagesClub = (int)Math.Ceiling((double)totalAdsDayYesterdayClubs / pagesSizeClub);
+
+                for (int pageNumber = 0; pageNumber < totalPagesClub; pageNumber++)
                 {
-                    var newAds = new TotalAdsClub()
-                    {
-                        Divisor = 0,
-                        Sales = perClubSalesToday,
-                        Ads = Math.Round(perClubSalesToday / 1, 2),
-                        Sku = inv.Sku,
-                        Clubs = inv.Clubs,
-                        StartDate = startDateInString,
-                        EndDate = startDateInString
-                    };
+                    int offset = pagesSizeClub * pageNumber;
 
-                    if (inv.Inv > 0 || perClubSalesToday > 0)
-                    {
-                        newAds.Divisor = 1;
-                    }
-
-                    adsPerClubsWithCurrentsales.Add(newAds);
+                    tasksPerClubs.Add(GetAverageSalesPerClubsByDate($"{CurrentDateWithZeroTime:yyyy-MM-dd HH:mm:ss.fff}", pagesSizeClub, offset));
                 }
-            }
 
-            await SaveAdsPerClubs(adsPerClubsWithCurrentsales, endDateInString);
+                await Task.WhenAll(tasksPerClubs);
+
+                //create dictionary of perclubs with key clubs + sku
+                var totalAdsClubDictionary = _totalAdsClubs.ToDictionary(x => new { x.Sku, x.Clubs });
+
+                var salesTodayWithoutNullClubsDictionary = salesTodayWithoutNullClubs.GroupBy(x => new { x.Sku, x.Clubs }).ToDictionary(group => group.Key, group => group.Sum(y => y.Sales));
+                var salesDayZeroWithoutNullClubsDictionary = salesDayZeroWithoutNullClubs.GroupBy(x => new { x.Sku, x.Clubs }).ToDictionary(group => group.Key, group => group.Sum(y => y.Sales));
+
+                var inventoryDayZeroWithoutNullClubsDictionary = inventoryDayZeroWithoutNullClubs.ToDictionary(x => new { x.Sku, x.Clubs }, y => y.Inv);
+                //var inventoryTodayWithoutNullClubsDictionary = inventoryTodayWithoutNullClubs.ToDictionary(x => new { x.Sku, x.Clubs }, y => y.Inv);
+
+                var adsPerClubsWithCurrentsales = new List<TotalAdsClub>();
+
+                foreach (var inv in inventoryTodayWithoutNullClubs)
+                {
+                    var hasAds = totalAdsClubDictionary.TryGetValue(new { inv.Sku, inv.Clubs }, out var adsOut);
+                    salesTodayWithoutNullClubsDictionary.TryGetValue(new { inv.Sku, inv.Clubs }, out var perClubSalesToday);
+
+                    if (hasAds)
+                    {
+                        var daysDifferenceOut = dateCompute.GetDifferenceInRange(adsOut.StartDate, adsOut.EndDate);
+
+                        if (daysDifferenceOut == 56)
+                        {
+                            salesDayZeroWithoutNullClubsDictionary.TryGetValue(new { inv.Sku, inv.Clubs }, out var perClubSalesDayZero);
+                            inventoryDayZeroWithoutNullClubsDictionary.TryGetValue(new { inv.Sku, inv.Clubs }, out var perClubInvDayZero);
+
+                            var newEndDate = endDateOut.AddDays(1);
+                            var endDateInStringNew = $"{newEndDate:yyyy-MM-dd HH:mm:ss.fff}";
+
+                            if (perClubSalesDayZero > 0 || perClubInvDayZero > 0)
+                            {
+                                adsOut.Sales -= perClubSalesDayZero;
+                                adsOut.Divisor--;
+                                adsOut.EndDate = endDateInStringNew;
+                            }
+                        }
+
+                        if (perClubSalesToday > 0 || inv.Inv > 0)
+                        {
+                            adsOut.Sales += perClubSalesToday;
+                            adsOut.Divisor++;
+                            adsOut.StartDate = startDateInString;
+                            adsOut.Ads = Math.Round(adsOut.Sales / adsOut.Divisor, 2);
+                        }
+
+                        adsPerClubsWithCurrentsales.Add(adsOut);
+                    }
+                    else
+                    {
+                        var newAds = new TotalAdsClub()
+                        {
+                            Divisor = 0,
+                            Sales = perClubSalesToday,
+                            Ads = Math.Round(perClubSalesToday / 1, 2),
+                            Sku = inv.Sku,
+                            Clubs = inv.Clubs,
+                            StartDate = startDateInString,
+                            EndDate = startDateInString
+                        };
+
+                        if (inv.Inv > 0 || perClubSalesToday > 0)
+                        {
+                            newAds.Divisor = 1;
+                        }
+
+                        adsPerClubsWithCurrentsales.Add(newAds);
+                    }
+                }
+
+                await SaveAdsPerClubs(adsPerClubsWithCurrentsales, endDateInString);
+            }
+            catch (Exception e)
+            {
+                DateTime endLogs = DateTime.Now;
+                Log.Add(new Logging
+                {
+                    StartLog = startLogs,
+                    EndLog = endLogs,
+                    Action = "Error",
+                    Message = "ComputeAds : " + e.Message + "",
+                    Record_Date = currentDate
+                });
+
+                localQuery.InsertLogs(Log);
+            }
         }
 
+        //Save ADS per Clubs
         private async Task SaveAdsPerClubs(List<TotalAdsClub> adsPerClubs, string lastDate)
         {
             var Log = new List<Logging>();
             var startLogs = DateTime.Now;
+            DateTime previousDate = startLogs.AddDays(-1);
 
             try
             {
@@ -789,7 +809,7 @@ namespace ads.Repository
                         EndLog = endLogs,
                         Action = "Total ADS",
                         Message = "Total Clubs Inserted : " + adsPerClubs.Count() + "",
-                        Record_Date = dateConvertion.ConvertStringDate(lastDate)
+                        Record_Date = dateConvertion.ConvertStringDate(previousDate.ToString("yyyy-MM-dd 00:00:00.000"))
                     });
 
                     localQuery.InsertLogs(Log);
@@ -804,17 +824,19 @@ namespace ads.Repository
                     EndLog = endLogs,
                     Action = "Error",
                     Message = "SaveAdsPerClubs  : " + e.Message + "",
-                    Record_Date = dateConvertion.ConvertStringDate(lastDate)
+                    Record_Date = dateConvertion.ConvertStringDate(previousDate.ToString("yyyy-MM-dd 00:00:00.000"))
                 });
 
                 localQuery.InsertLogs(Log);
             }
         }
 
+        //Save ADS Chain
         private async Task SaveTotalAdsChain(List<TotalAdsChain> totalAds, string lastDate)
         {
             var Log = new List<Logging>();
             var startLogs = DateTime.Now;
+            DateTime previousDate = startLogs.AddDays(-1);
 
             try
             {
@@ -864,7 +886,7 @@ namespace ads.Repository
                         EndLog = endLogs,
                         Action = "Total ADS",
                         Message = "Total Sku Inserted : " + totalAds.Count() + "",
-                        Record_Date = dateConvertion.ConvertStringDate(lastDate)
+                        Record_Date = dateConvertion.ConvertStringDate(previousDate.ToString("yyyy-MM-dd 00:00:00.000"))
                     });
 
                     localQuery.InsertLogs(Log);
@@ -879,13 +901,14 @@ namespace ads.Repository
                     EndLog = endLogs,
                     Action = "Error",
                     Message = "SaveTotalAdsChain  : " + e.Message + "",
-                    Record_Date = dateConvertion.ConvertStringDate(lastDate)
+                    Record_Date = dateConvertion.ConvertStringDate(previousDate.ToString("yyyy-MM-dd 00:00:00.000"))
                 });
 
                 localQuery.InsertLogs(Log);
             }
         }
 
+        //Get Count of ADS Chain by Date
         private async Task<int> GetCountAdsChainByDate(string dateListString)
         {
             int totalCount = 0;
@@ -912,6 +935,7 @@ namespace ads.Repository
             return totalCount;
         }
 
+        //Get Count of ADS per clubs by Date
         private async Task<int> GetCountAdsByDate(string dateListString)
         {
             int totalCount = 0;
@@ -938,6 +962,7 @@ namespace ads.Repository
             return totalCount;
         }
 
+        //Store Procedure Get ADS Chain by Date
         public async Task GetAverageSalesChainByDate(string dateListString, int pageSize, int offset)
         {
             string strConn = "data source='199.84.0.201';Initial Catalog=ADS.UAT;User Id=sa;password=@dm1n@8800;Trusted_Connection=false;MultipleActiveResultSets=true;TrustServerCertificate=True;";
@@ -945,6 +970,7 @@ namespace ads.Repository
 
             var Log = new List<Logging>();
             DateTime startLogs = DateTime.Now;
+            DateTime previousDate = startLogs.AddDays(-1);
 
             await Task.Run(() =>
             {
@@ -997,7 +1023,7 @@ namespace ads.Repository
                         EndLog = endLogs,
                         Action = "Error",
                         Message = "GetAverageSalesChainByDate  : " + e.Message + "",
-                        Record_Date = dateConvertion.ConvertStringDate(dateListString)
+                        Record_Date = dateConvertion.ConvertStringDate(previousDate.ToString("yyyy-MM-dd 00:00:00.000"))
                     });
 
                     localQuery.InsertLogs(Log);
@@ -1006,6 +1032,7 @@ namespace ads.Repository
             });
         }
 
+        //Store Procedure Get ADS per clubs by Date
         public async Task GetAverageSalesPerClubsByDate(string dateListString, int pageSize, int offset)
         {
             string strConn = "data source='199.84.0.201';Initial Catalog=ADS.UAT;User Id=sa;password=@dm1n@8800;Trusted_Connection=false;MultipleActiveResultSets=true;TrustServerCertificate=True;";
@@ -1013,6 +1040,7 @@ namespace ads.Repository
 
             var Log = new List<Logging>();
             DateTime startLogs = DateTime.Now;
+            DateTime previousDate = startLogs.AddDays(-1);
 
             await Task.Run(() =>
             {
@@ -1065,7 +1093,7 @@ namespace ads.Repository
                         EndLog = endLogs,
                         Action = "Error",
                         Message = "GetAverageSalesPerClubsByDate  : " + e.Message + "",
-                        Record_Date = dateConvertion.ConvertStringDate(dateListString)
+                        Record_Date = dateConvertion.ConvertStringDate(previousDate.ToString("yyyy-MM-dd 00:00:00.000"))
                     });
 
                     localQuery.InsertLogs(Log);
