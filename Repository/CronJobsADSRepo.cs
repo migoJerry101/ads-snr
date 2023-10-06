@@ -68,7 +68,7 @@ namespace ads.Repository
                 using (OledbCon db = new OledbCon())
                 {
                     await db.OpenAsync();
-
+                    await _openQuery.ImportItems(db);
                     await _openQuery.ImportClubs(db);
 
                     var inventory = await _openQuery.ListIventory(db);

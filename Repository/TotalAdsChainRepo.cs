@@ -19,5 +19,12 @@ namespace ads.Repository
 
             return totalAdsChain;
         }
+
+        public async Task<List<TotalAdsChain>> GetTotalAdsChainByDate(string date)
+        {
+            var ads = await _context.TotalAdsChains.Where(x => x.StartDate == date).ToListAsync();
+
+            return ads;
+        }
     }
 }

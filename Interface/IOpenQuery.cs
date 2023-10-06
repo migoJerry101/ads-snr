@@ -10,5 +10,6 @@ namespace ads.Interface
         Task<List<GeneralModel>> ListIventory(OledbCon db);
         Task<List<GeneralModel>> ListOfAllStore(OledbCon db);
         Task ImportClubs(OledbCon db);
+        Task ImportItems(OledbCon db);
     }
 }

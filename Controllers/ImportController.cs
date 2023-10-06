@@ -85,7 +85,7 @@ namespace ads.Controllers
             {
                 await db.OpenAsync();
 
-                await _openQuery.ImportClubs(db);
+                await _openQuery.ImportItems(db);
 
                 return Ok();
             }

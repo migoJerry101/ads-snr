@@ -235,7 +235,7 @@ namespace ads.Repository
             DateTime startLogs = DateTime.Now;
 
             var clubsTableName = "tbl_Clubs";
-            var truncateDepartmentQuery = $"TRUNCATE TABLE {clubsTableName}";
+            var truncateClubQuery = $"TRUNCATE TABLE {clubsTableName}";
 
             try
             {
@@ -244,7 +244,7 @@ namespace ads.Repository
                     db.Con.Open();
                 }
 
-                using (var command = new SqlCommand(truncateDepartmentQuery, db.Con))
+                using (var command = new SqlCommand(truncateClubQuery, db.Con))
                 {
                     await command.ExecuteNonQueryAsync();
                 }
@@ -330,7 +330,94 @@ namespace ads.Repository
 
         public async Task ImportItems(OledbCon db)
         {
+            var list = new List<Item>();
+            var Log = new List<Logging>();
+            var startLogs = DateTime.Now;
 
+            var clubsTableName = "tbl_Items";
+            var truncateClubQuery = $"TRUNCATE TABLE {clubsTableName}";
+
+            try
+            {
+                if (db.Con.State == ConnectionState.Closed)
+                {
+                    db.Con.Open();
+                }
+
+                using (var command = new SqlCommand(truncateClubQuery, db.Con))
+                {
+                    await command.ExecuteNonQueryAsync();
+                }
+
+                string query = "select * from Openquery([snr], 'SELECT INUMBR,IDESCR from MMJDALIB.INVMST WHERE ISTYPE = ''01'' AND IDSCCD IN (''A'',''I'',''D'',''P'') AND IATRB1 IN (''L'',''I'',''LI'')')";
+
+                using (SqlCommand cmd = new SqlCommand(query, db.Con))
+                {
+                    cmd.CommandTimeout = 18000;
+
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            var item = new Item
+                            {
+                                Sku = reader["INUMBR"].ToString(),
+                                Name = reader["IDESCR"].ToString()
+                            };
+
+                            list.Add(item);
+                        }
+                    }
+
+                    if (list.Count > 0)
+                    {
+                        using (var transaction = db.Con.BeginTransaction())
+                        {
+                            using (var bulkCopy = new SqlBulkCopy(db.Con, SqlBulkCopyOptions.Default, transaction))
+                            {
+                                bulkCopy.DestinationTableName = "tbl_Items";
+                                bulkCopy.BatchSize = 1000;
+
+                                var dataTable = new DataTable();
+                                dataTable.Columns.Add("Id", typeof(int));
+                                dataTable.Columns.Add("SKU", typeof(int));
+                                dataTable.Columns.Add("Name", typeof(string));
+
+                                foreach (var item in list)
+                                {
+                                    var row = dataTable.NewRow();
+                                    row["Id"] = item.Id;
+                                    row["Sku"] = item.Sku;
+                                    row["Name"] = item.Name;
+
+                                    dataTable.Rows.Add(row);
+                                }
+
+                                bulkCopy.WriteToServer(dataTable);
+                            }
+
+                            transaction.Commit();
+                        }
+                    }
+
+                    db.Con.Close();
+                }
+            }
+            catch (Exception e)
+            {
+                DateTime endLogs = DateTime.Now;
+                Log.Add(new Logging
+                {
+                    StartLog = startLogs,
+                    EndLog = endLogs,
+                    Action = "Error",
+                    Message = "ListOfAllSKu : " + e.Message + " ",
+                    Record_Date = Convert.ToDateTime(startLogs.ToString("yyyy-MM-dd 00:00:00.000"))
+
+                });
+
+                _logs.InsertLogs(Log);
+            }
         }
     }
 }

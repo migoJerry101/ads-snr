@@ -14,6 +14,7 @@ namespace ads.Repository
         {
             _context = context;
         }
+
         public async Task<(List<TotalAdsClub>, int totalPages)> GetPaginatedTotalAdsClubs(TotalAdsChainPaginationDto data)
         {
             var ads = _context.TotalAdsClubs.Where(x =>
@@ -30,6 +31,13 @@ namespace ads.Repository
                 .ToListAsync();
 
             return (paginatedAds, totalPages);
+        }
+
+        public async Task<List<TotalAdsClub>> GetTotalAdsClubsByDate(string date)
+        {
+            var ads = await _context.TotalAdsClubs.Where(x=> x.StartDate == date).ToListAsync();
+
+            return ads;
         }
     }
 }
