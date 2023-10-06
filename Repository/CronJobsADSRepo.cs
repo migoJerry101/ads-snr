@@ -86,8 +86,6 @@ namespace ads.Repository
             catch (Exception e)
             {
                 Console.WriteLine(e.Message);
-
-                Console.WriteLine(e.Message);
                 DateTime endLogs = DateTime.Now;
                 Log.Add(new Logging
                 {
