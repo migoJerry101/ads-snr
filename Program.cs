@@ -18,6 +18,8 @@ builder.Services.AddScoped<IImportInventory, ImportInventoryRepo>();
 builder.Services.AddScoped<IAdsBackGroundTask, AdsBackGroundTaskRepo>();
 builder.Services.AddScoped<ITotalAdsChain, TotalAdsChainRepo>();
 builder.Services.AddScoped<ITotalAdsClub, TotalAdsClubRepo>();
+builder.Services.AddScoped<IClub, ClubRepo>();
+builder.Services.AddScoped<IItem, ItemRepo>();
 
 //Quartz run for cronjob
 builder.Services.AddQuartz(q =>

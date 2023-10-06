@@ -30,8 +30,6 @@ namespace ads.Repository
         private readonly IAds _ads;
         private readonly IOpenQuery _openQuery;
 
-        private readonly DateConvertion dateConvertion = new DateConvertion();
-
         private readonly LogsRepo localQuery = new LogsRepo();
 
         public CronJobsADSRepo(IInvetory invetory, ISales sales, IAds ads, IOpenQuery openQuery)
@@ -70,6 +68,8 @@ namespace ads.Repository
                 using (OledbCon db = new OledbCon())
                 {
                     await db.OpenAsync();
+                    await _openQuery.ImportItems(db);
+                    await _openQuery.ImportClubs(db);
 
                     var inventory = await _openQuery.ListIventory(db);
                     var skus = await _openQuery.ListOfAllSKu(db);
@@ -95,7 +95,7 @@ namespace ads.Repository
                     EndLog = endLogs,
                     Action = "Error",
                     Message = "Execute CronJobs : " + e.Message + "",
-                    Record_Date = dateConvertion.ConvertStringDate(startDate) 
+                    Record_Date = DateConvertion.ConvertStringDate(startDate) 
                 });
 
                 localQuery.InsertLogs(Log);

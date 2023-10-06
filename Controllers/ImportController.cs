@@ -13,12 +13,14 @@ namespace ads.Controllers
         private readonly IInvetory _invetory;
         private readonly ISales _sales;
         private readonly IAds _ads;
+        private readonly IOpenQuery _openQuery;
 
-        public ImportController(IInvetory invetory, ISales sales, IAds ads)
+        public ImportController(IInvetory invetory, ISales sales, IAds ads, IOpenQuery openQuery)
         {
             _invetory = invetory;
             _sales = sales;
             _ads = ads;
+            _openQuery = openQuery;
         }
 
         [HttpPost]
@@ -73,6 +75,20 @@ namespace ads.Controllers
             var computation = await _ads.GetComputation(start);
 
             return Ok(computation);
+        }
+
+        [HttpPost]
+        [Route("ImportClubs")]
+        public async Task<IActionResult> ImportClubs()
+        {
+            using (OledbCon db = new OledbCon())
+            {
+                await db.OpenAsync();
+
+                await _openQuery.ImportItems(db);
+
+                return Ok();
+            }
         }
     }
 }

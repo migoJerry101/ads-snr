@@ -13,7 +13,7 @@ namespace ads.Repository
         private readonly IOpenQuery _openQuery;
         private readonly ILogs _logs ;
 
-        private readonly DateConvertion dateConvertion = new DateConvertion();
+        //private readonly DateConvertion dateConvertion = new DateConvertion();
         public List<Inventory> _inventoryList = new List<Inventory>();
 
         public InventoryRepo(IOpenQuery openQuery, ILogs logs)
@@ -66,7 +66,7 @@ namespace ads.Repository
                                         Sku = sku.INUMBR,
                                         Clubs = inv.ISTORE,
                                         Inv = inv.IBHAND,
-                                        Date = dateConvertion.ConvertStringDate(date),
+                                        Date = DateConvertion.ConvertStringDate(date),
                                     });
                                 }
                                 else
@@ -76,7 +76,7 @@ namespace ads.Repository
                                         Sku = sku.INUMBR,
                                         Clubs = inv.ISTORE,
                                         Inv = inv.IBHAND,
-                                        Date = dateConvertion.ConvertStringDate(start),
+                                        Date = DateConvertion.ConvertStringDate(start),
                                     });
                                 }
                             }
@@ -89,7 +89,7 @@ namespace ads.Repository
                                 Sku = sku.INUMBR,
                                 Clubs = string.Empty,
                                 Inv = 0,
-                                Date = dateConvertion.ConvertStringDate(start),
+                                Date = DateConvertion.ConvertStringDate(start),
                             });
                         }
                     }
@@ -136,7 +136,7 @@ namespace ads.Repository
                     EndLog = endLogs,
                     Action = "Inventory",
                     Message = "Total Rows Inserted : " + ListInventory.Count + "",
-                    Record_Date = dateConvertion.ConvertStringDate(start)
+                    Record_Date = DateConvertion.ConvertStringDate(start)
                 });
 
                 _logs.InsertLogs(Log);
@@ -155,7 +155,7 @@ namespace ads.Repository
                     EndLog = endLogs,
                     Action = "Error",
                     Message = "GetInventoryAsync : " + e.Message + " ",
-                    Record_Date = dateConvertion.ConvertStringDate(start)
+                    Record_Date = DateConvertion.ConvertStringDate(start)
                 });
 
                 _logs.InsertLogs(Log);
@@ -252,7 +252,7 @@ namespace ads.Repository
                     EndLog = endLogs,
                     Action = "Error",
                     Message = "GetInventories : " + e.Message + " ",
-                    Record_Date = dateConvertion.ConvertStringDate(dateListString)  
+                    Record_Date = DateConvertion.ConvertStringDate(dateListString)  
                 });
 
                 _logs.InsertLogs(Log);
