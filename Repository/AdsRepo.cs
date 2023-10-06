@@ -630,7 +630,7 @@ namespace ads.Repository
                         ads.Divisor++;
                         ads.Ads = Math.Round(ads.Sales / ads.Divisor, 2);
                     }
-                    
+
                     ads.StartDate = startDateInString;
 
                     adsWithCurrentsales.Add(ads);
@@ -1011,17 +1011,22 @@ namespace ads.Repository
             string strConn = "data source='199.84.0.201';Initial Catalog=ADS.UAT;User Id=sa;password=@dm1n@8800;Trusted_Connection=false;MultipleActiveResultSets=true;TrustServerCertificate=True;";
             var con = new SqlConnection(strConn);
 
+            var Log = new List<Logging>();
+            DateTime startLogs = DateTime.Now;
+
             await Task.Run(() =>
             {
-                using (var command = new SqlCommand("_sp_GetTblDataSample4", con))
+                try
                 {
-                    command.CommandType = CommandType.StoredProcedure;
-                    command.Parameters.AddWithValue("@Offset", offset);
-                    command.Parameters.AddWithValue("@PageSize", pageSize);
-                    command.Parameters.AddWithValue("@dateListString", dateListString);
-                    command.CommandTimeout = 18000;
-                    var totalAdsPerClubs = new List<TotalAdsClub>();
-                    con.Open();
+                    using (var command = new SqlCommand("_sp_GetTblDataSample4", con))
+                    {
+                        command.CommandType = CommandType.StoredProcedure;
+                        command.Parameters.AddWithValue("@Offset", offset);
+                        command.Parameters.AddWithValue("@PageSize", pageSize);
+                        command.Parameters.AddWithValue("@dateListString", dateListString);
+                        command.CommandTimeout = 18000;
+                        var totalAdsPerClubs = new List<TotalAdsClub>();
+                        con.Open();
 
                         // Open the connection and execute the command
                         SqlDataReader reader = command.ExecuteReader();
@@ -1031,40 +1036,42 @@ namespace ads.Repository
                         {
                             var startDate = reader.GetString("StartDate");
 
-                        var ads = new TotalAdsClub
-                        {
-                            Sku = reader["Sku"].ToString(),
-                            Sales = Convert.ToDecimal(reader["Sales"].ToString()),
-                            Clubs = reader["Clubs"].ToString(),
-                            Ads = Convert.ToDecimal(reader["Ads"].ToString()),
-                            Divisor = Convert.ToInt32(reader["Divisor"].ToString()),
-                            StartDate = startDate,
-                            EndDate = reader.GetString("EndDate")
-                        };
+                            var ads = new TotalAdsClub
+                            {
+                                Sku = reader["Sku"].ToString(),
+                                Sales = Convert.ToDecimal(reader["Sales"].ToString()),
+                                Clubs = reader["Clubs"].ToString(),
+                                Ads = Convert.ToDecimal(reader["Ads"].ToString()),
+                                Divisor = Convert.ToInt32(reader["Divisor"].ToString()),
+                                StartDate = startDate,
+                                EndDate = reader.GetString("EndDate")
+                            };
 
                             totalAdsPerClubs.Add(ads);
-                        }
 
+                        }
                         _totalAdsClubs.AddRange(totalAdsPerClubs);
                         reader.Close();
                         con.Close();
-                    }
-                });
-            }
-            catch (Exception e)
-            {
-                DateTime endLogs = DateTime.Now;
-                Log.Add(new Logging
-                {
-                    StartLog = startLogs,
-                    EndLog = endLogs,
-                    Action = "Error",
-                    Message = "GetAverageSalesPerClubsByDate  : " + e.Message + "",
-                    Record_Date = dateConvertion.ConvertStringDate(dateListString)
-                });
 
-                localQuery.InsertLogs(Log);
-            }
+                    };
+                }
+                catch (Exception e)
+                {
+                    DateTime endLogs = DateTime.Now;
+                    Log.Add(new Logging
+                    {
+                        StartLog = startLogs,
+                        EndLog = endLogs,
+                        Action = "Error",
+                        Message = "GetAverageSalesPerClubsByDate  : " + e.Message + "",
+                        Record_Date = dateConvertion.ConvertStringDate(dateListString)
+                    });
+
+                    localQuery.InsertLogs(Log);
+                }
+
+            });
         }
     }
 }
