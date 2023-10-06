@@ -2,9 +2,9 @@
 
 namespace ads.Utility
 {
-    public class DateConvertion
+    public static class DateConvertion
     {
-        public DateTime ConvertStringDate(string? date)
+        public static DateTime ConvertStringDate(string? date)
         {
             // Input string in the format "yyMMdd"
             string dateString = date; // for September 20, 2023

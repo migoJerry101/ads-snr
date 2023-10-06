@@ -16,9 +16,8 @@ namespace ads.Repository
         private readonly IOpenQuery _openQuery;
         private readonly ILogs _logs;
 
-        private readonly DateConvertion dateConvertion = new DateConvertion();
+        //private readonly DateConvertion dateConvertion = new DateConvertion();
         private List<Sale> _saleList = new List<Sale>();
-        private readonly DateComputeUtility dateCompute = new DateComputeUtility();
 
         public SalesRepo(IOpenQuery openQuery, ILogs logs)
         {
@@ -37,7 +36,7 @@ namespace ads.Repository
                     Sku = sku,
                     Clubs = data.CSSTOR ?? data.ISTORE,
                     Sales = hasSales ? data.CSQTY : 0,
-                    Date = dateConvertion.ConvertStringDate(!useStartDate ? data.CSDATE : date),
+                    Date = DateConvertion.ConvertStringDate(!useStartDate ? data.CSDATE : date),
                 };
 
                 listOfOledb.Add(Olde);
@@ -85,7 +84,7 @@ namespace ads.Repository
                                     Sku = sku.INUMBR,
                                     Clubs = data.CSSTOR,
                                     Sales = data.CSQTY,
-                                    Date = dateConvertion.ConvertStringDate( data.CSDATE),
+                                    Date = DateConvertion.ConvertStringDate( data.CSDATE),
                                 };
 
                                 listOfOledb.Add(Olde);
@@ -106,7 +105,7 @@ namespace ads.Repository
                                         Sku = sku.INUMBR,
                                         Clubs = data.ISTORE,
                                         Sales = 0,
-                                        Date = dateConvertion.ConvertStringDate(start),
+                                        Date = DateConvertion.ConvertStringDate(start),
                                     };
 
                                     listOfOledb.Add(Olde);
@@ -123,7 +122,7 @@ namespace ads.Repository
                                     Sku = sku.INUMBR,
                                     Clubs = string.Empty,
                                     Sales = 0,
-                                    Date = dateConvertion.ConvertStringDate(start),
+                                    Date = DateConvertion.ConvertStringDate(start),
                                 };
 
                                 listOfOledb.Add(Olde);
@@ -171,7 +170,7 @@ namespace ads.Repository
                     EndLog = endLogs,
                     Action = "Sales",
                     Message = "Total Rows Inserted : " + listOfOledb.Count + "",
-                    Record_Date = dateConvertion.ConvertStringDate(start)
+                    Record_Date = DateConvertion.ConvertStringDate(start)
                 });
 
                 _logs.InsertLogs(Log);
@@ -187,7 +186,7 @@ namespace ads.Repository
                     EndLog = endLogs,
                     Action = "Error",
                     Message = "GetSalesAsync : " + e.Message + " ",
-                    Record_Date = dateConvertion.ConvertStringDate(start)
+                    Record_Date = DateConvertion.ConvertStringDate(start)
                 });
 
                 _logs.InsertLogs(Log);
@@ -261,7 +260,7 @@ namespace ads.Repository
                     EndLog = endLogs,
                     Action = "Error",
                     Message = "GetAllSales : " + e.Message + " ",
-                    Record_Date = dateConvertion.ConvertStringDate(dateListString)
+                    Record_Date = DateConvertion.ConvertStringDate(dateListString)
                 });
 
                 _logs.InsertLogs(Log);

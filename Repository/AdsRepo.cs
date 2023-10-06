@@ -18,21 +18,21 @@ namespace ads.Repository
     public class AdsRepo : IAds
     {
         private readonly OpenQueryRepo openQuery = new OpenQueryRepo();
-        private readonly DateConvertion dateConvertion = new DateConvertion();
         private readonly LogsRepo localQuery = new LogsRepo();
-        private readonly DateComputeUtility dateCompute = new DateComputeUtility();
         public List<TotalAdsChain> _totalAdsChain = new List<TotalAdsChain>();
         public List<TotalAdsClub> _totalAdsClubs = new List<TotalAdsClub>();
 
         private readonly ISales _sales;
         private readonly IInvetory _invetory;
         private readonly IOpenQuery _openQuery;
+        private readonly IClub _club;
 
-        public AdsRepo(ISales sales, IInvetory invetory, IOpenQuery openQuery)
+        public AdsRepo(ISales sales, IInvetory invetory, IOpenQuery openQuery, IClub club)
         {
             _sales = sales;
             _invetory = invetory;
             _openQuery = openQuery;
+            _club = club;
         }
 
 
@@ -57,7 +57,7 @@ namespace ads.Repository
             //DateTime startDate = Convert.ToDateTime("2023-05-22 00:00:00.000");
 
             //Date Ranges of Computation of 56 days
-            string dateListString = string.Join(",", dateCompute.DateCompute(startDate).Select(date => $"'{date}'"));
+            string dateListString = string.Join(",", DateComputeUtility.DateCompute(startDate).Select(date => $"'{date}'"));
             dateListString = dateListString.TrimEnd(',');
 
 
@@ -262,7 +262,7 @@ namespace ads.Repository
                         EndLog = endLogs,
                         Action = "Total ADS",
                         Message = "Total Sku Inserted : " + totalAPDs.Count() + "",
-                        Record_Date = dateConvertion.ConvertStringDate(lastDate)
+                        Record_Date = DateConvertion.ConvertStringDate(lastDate)
                     });
 
                     localQuery.InsertLogs(Log);
@@ -279,7 +279,7 @@ namespace ads.Repository
                     EndLog = endLogs,
                     Action = "Error",
                     Message = "GetTotalApdAsync  : " + e.Message + "",
-                    Record_Date = dateConvertion.ConvertStringDate(lastDate)
+                    Record_Date = DateConvertion.ConvertStringDate(lastDate)
                 });
 
                 localQuery.InsertLogs(Log);
@@ -473,7 +473,7 @@ namespace ads.Repository
                         EndLog = endLogs,
                         Action = "Total ADS",
                         Message = "Total Clubs Inserted : " + totalAPDs.Count() + "",
-                        Record_Date = dateConvertion.ConvertStringDate(lastDate)
+                        Record_Date = DateConvertion.ConvertStringDate(lastDate)
                     });
 
                     localQuery.InsertLogs(Log);
@@ -491,7 +491,7 @@ namespace ads.Repository
                     EndLog = endLogs,
                     Action = "Error",
                     Message = "GetTotalSkuAndClubsAsync : " + e.Message + "",
-                    Record_Date = dateConvertion.ConvertStringDate(lastDate)
+                    Record_Date = DateConvertion.ConvertStringDate(lastDate)
                 });
 
                 localQuery.InsertLogs(Log);
@@ -594,7 +594,7 @@ namespace ads.Repository
                     var hasSales = salesTotalDictionaryDayZero.TryGetValue(sku, out var totalSalesOut);
                     var hasInventory = inventoryTodayDictionaryDayZero.TryGetValue(sku, out var totalInvOut);
 
-                    var daysDifferenceOut = dateCompute.GetDifferenceInRange(ads.StartDate, ads.EndDate);
+                    var daysDifferenceOut = DateComputeUtility.GetDifferenceInRange(ads.StartDate, ads.EndDate);
 
                     if (daysDifferenceOut == 56)
                     {
@@ -683,7 +683,7 @@ namespace ads.Repository
 
                 if (hasAds)
                 {
-                    var daysDifferenceOut = dateCompute.GetDifferenceInRange(adsOut.StartDate, adsOut.EndDate);
+                    var daysDifferenceOut = DateComputeUtility.GetDifferenceInRange(adsOut.StartDate, adsOut.EndDate);
 
                     if (daysDifferenceOut == 56)
                     {
@@ -789,7 +789,7 @@ namespace ads.Repository
                         EndLog = endLogs,
                         Action = "Total ADS",
                         Message = "Total Clubs Inserted : " + adsPerClubs.Count() + "",
-                        Record_Date = dateConvertion.ConvertStringDate(lastDate)
+                        Record_Date = DateConvertion.ConvertStringDate(lastDate)
                     });
 
                     localQuery.InsertLogs(Log);
@@ -804,7 +804,7 @@ namespace ads.Repository
                     EndLog = endLogs,
                     Action = "Error",
                     Message = "SaveAdsPerClubs  : " + e.Message + "",
-                    Record_Date = dateConvertion.ConvertStringDate(lastDate)
+                    Record_Date = DateConvertion.ConvertStringDate(lastDate)
                 });
 
                 localQuery.InsertLogs(Log);
@@ -864,7 +864,7 @@ namespace ads.Repository
                         EndLog = endLogs,
                         Action = "Total ADS",
                         Message = "Total Sku Inserted : " + totalAds.Count() + "",
-                        Record_Date = dateConvertion.ConvertStringDate(lastDate)
+                        Record_Date = DateConvertion.ConvertStringDate(lastDate)
                     });
 
                     localQuery.InsertLogs(Log);
@@ -879,7 +879,7 @@ namespace ads.Repository
                     EndLog = endLogs,
                     Action = "Error",
                     Message = "SaveTotalAdsChain  : " + e.Message + "",
-                    Record_Date = dateConvertion.ConvertStringDate(lastDate)
+                    Record_Date = DateConvertion.ConvertStringDate(lastDate)
                 });
 
                 localQuery.InsertLogs(Log);
@@ -997,7 +997,7 @@ namespace ads.Repository
                         EndLog = endLogs,
                         Action = "Error",
                         Message = "GetAverageSalesChainByDate  : " + e.Message + "",
-                        Record_Date = dateConvertion.ConvertStringDate(dateListString)
+                        Record_Date = DateConvertion.ConvertStringDate(dateListString)
                     });
 
                     localQuery.InsertLogs(Log);
@@ -1065,7 +1065,7 @@ namespace ads.Repository
                         EndLog = endLogs,
                         Action = "Error",
                         Message = "GetAverageSalesPerClubsByDate  : " + e.Message + "",
-                        Record_Date = dateConvertion.ConvertStringDate(dateListString)
+                        Record_Date = DateConvertion.ConvertStringDate(dateListString)
                     });
 
                     localQuery.InsertLogs(Log);

@@ -11,10 +11,12 @@ namespace ads.Controllers
     public class TotalAdsClubController : ControllerBase
     {
         private readonly ITotalAdsClub _totalAdsClub;
+        private readonly IClub _club;
 
-        public TotalAdsClubController(ITotalAdsClub totalAdsClub)
+        public TotalAdsClubController(ITotalAdsClub totalAdsClub, IClub club)
         {
             _totalAdsClub = totalAdsClub;
+            _club = club;
         }
 
         [HttpPost]
@@ -30,6 +32,15 @@ namespace ads.Controllers
             };
 
             return Ok(dto);
+        }
+
+        [HttpPost]
+        [Route("GetClubs")]
+        public async Task<ActionResult> GetClubs()
+        {
+            var ads = await _club.GetAllClubs();
+
+            return Ok(ads);
         }
     }
 }

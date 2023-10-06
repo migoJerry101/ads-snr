@@ -10,7 +10,7 @@ namespace ads.Repository
 {
     public class OpenQueryRepo : IOpenQuery
     {
-        private readonly DateConvertion dateConvertion = new DateConvertion();
+        //private readonly DateConvertion dateConvertion = new DateConvertion();
 
         private readonly ILogs _logs;
 
@@ -228,5 +228,109 @@ namespace ads.Repository
             return list.ToList();
         }
 
+        public async Task ImportClubs(OledbCon db)
+        {
+            var list = new List<Club>();
+            var Log = new List<Logging>();
+            DateTime startLogs = DateTime.Now;
+
+            var clubsTableName = "tbl_Clubs";
+            var truncateDepartmentQuery = $"TRUNCATE TABLE {clubsTableName}";
+
+            try
+            {
+                if (db.Con.State == ConnectionState.Closed)
+                {
+                    db.Con.Open();
+                }
+
+                using (var command = new SqlCommand(truncateDepartmentQuery, db.Con))
+                {
+                    await command.ExecuteNonQueryAsync();
+                }
+
+                string query = "select * from Openquery([snr], 'SELECT STRNUM, STRNAM ,STSDAT from MMJDALIB.TBLSTR WHERE STPOLL = ''Y'' AND STSDAT > 0')";
+
+                using (SqlCommand cmd = new SqlCommand(query, db.Con))
+                {
+                    cmd.CommandTimeout = 18000;
+
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            var dateStart = reader["STSDAT"].ToString();
+                            
+                            if(dateStart.Length < 6)
+                            {
+                                dateStart = $"0{dateStart}";
+                            }
+
+                            var Olde = new Club
+                            {
+                                Number = Convert.ToInt32(reader["STRNUM"].ToString()),
+                                Name = reader["STRNAM"].ToString(),
+                                StartDate = DateConvertion.ConvertStringDate(dateStart),
+                            };
+
+                            list.Add(Olde);
+                        }
+                    }
+
+                    if (list.Count > 0)
+                    {
+                        using (var transaction = db.Con.BeginTransaction())
+                        {
+                            using (var bulkCopy = new SqlBulkCopy(db.Con, SqlBulkCopyOptions.Default, transaction))
+                            {
+                                bulkCopy.DestinationTableName = "tbl_Clubs";
+                                bulkCopy.BatchSize = 1000;
+
+                                var dataTable = new DataTable();
+                                dataTable.Columns.Add("Id", typeof(int));
+                                dataTable.Columns.Add("Number", typeof(int));
+                                dataTable.Columns.Add("Name", typeof(string));
+                                dataTable.Columns.Add("StartDate", typeof(DateTime));
+
+
+                                foreach (var club in list)
+                                {
+                                    var row = dataTable.NewRow();
+                                    row["Id"] = club.Id;
+                                    row["Number"] = club.Number;
+                                    row["Name"] = club.Name;
+                                    row["StartDate"] = club.StartDate;
+
+                                    dataTable.Rows.Add(row);
+                                }
+
+                                bulkCopy.WriteToServer(dataTable);
+                            }
+
+                            transaction.Commit();
+                        }
+                    }
+
+                    db.Con.Close();
+                }
+            }
+            catch (Exception e)
+            {
+                DateTime endLogs = DateTime.Now;
+                Log.Add(new Logging
+                {
+                    StartLog = startLogs,
+                    EndLog = endLogs,
+                    Action = "Error",
+                    Message = "ListOfAllStore : " + e.Message + " ",
+                    Record_Date = Convert.ToDateTime(startLogs.ToString("yyyy-MM-dd 00:00:00.000"))
+                });
+            }
+        }
+
+        public async Task ImportItems(OledbCon db)
+        {
+
+        }
     }
 }

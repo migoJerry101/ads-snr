@@ -3,14 +3,14 @@ using System.Globalization;
 
 namespace ads.Utility
 {
-    public class DateComputeUtility
+    public static class DateComputeUtility
     {
         //List of Date within 56 days 
-        public List<string> DateCompute(DateTime startDate)
+        public static List<string> DateCompute(DateTime startDate)
         {
             List<string> listDate = new List<string>();
 
-            DateTime endDate = startDate.AddDays(-15);
+            DateTime endDate = startDate.AddDays(-1);
             //DateTime endDate = startDate.AddDays(-55);
 
             // Iterate through the date range
@@ -23,7 +23,8 @@ namespace ads.Utility
 
             return listDate;
         }
-        public List<DateTime> GetDatesInRange(DateTime startDate, DateTime endDate)
+
+        public static List<DateTime> GetDatesInRange(DateTime startDate, DateTime endDate)
         {
             List<DateTime> datesInRange = new List<DateTime>();
 
@@ -35,7 +36,7 @@ namespace ads.Utility
             return datesInRange;
         }
 
-        public int GetDifferenceInRange(string startDate, string endDate)
+        public static int GetDifferenceInRange(string startDate, string endDate)
         {
             string format = "yyyy-MM-dd HH:mm:ss.fff";
             DateTime.TryParseExact(startDate, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime startDateCheckOut);
