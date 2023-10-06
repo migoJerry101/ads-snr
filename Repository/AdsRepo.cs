@@ -21,8 +21,8 @@ namespace ads.Repository
         private readonly DateConvertion dateConvertion = new DateConvertion();
         private readonly LogsRepo localQuery = new LogsRepo();
         private readonly DateComputeUtility dateCompute = new DateComputeUtility();
-        public List<TotalADS> _totalAdsChain = new List<TotalADS>();
-        public List<TotalADS> _totalAdsClubs = new List<TotalADS>();
+        public List<TotalAdsChain> _totalAdsChain = new List<TotalAdsChain>();
+        public List<TotalAdsClub> _totalAdsClubs = new List<TotalAdsClub>();
 
         private readonly ISales _sales;
         private readonly IInvetory _invetory;
@@ -36,9 +36,9 @@ namespace ads.Repository
         }
 
 
-        public async Task<List<TotalADS>> GetComputation(string stringDate)
+        public async Task<List<TotalAdsChain>> GetComputation(string stringDate)
         {
-            List<TotalADS> returnlist = new List<TotalADS>();
+            List<TotalAdsChain> returnlist = new List<TotalAdsChain>();
 
             //Start Logs
             List<Logging> Log = new List<Logging>();
@@ -80,7 +80,7 @@ namespace ads.Repository
             return returnlist;
         }
 
-        public async Task<List<TotalADS>> GetTotalApdAsync(List<Inventory> listInventoryResult, List<Sale> listSalesResult, string dateListString)
+        public async Task<List<TotalAdsChain>> GetTotalApdAsync(List<Inventory> listInventoryResult, List<Sale> listSalesResult, string dateListString)
         {
             //Start Logs
             List<Logging> Log = new List<Logging>();
@@ -95,7 +95,7 @@ namespace ads.Repository
             string firstDate = fistDatePart.Trim('\'');
             string lastDate = lastDatePart.Trim('\'');
 
-            List<TotalADS> totalAPDs = new List<TotalADS>();
+            List<TotalAdsChain> totalAPDs = new List<TotalAdsChain>();
 
             try
             {
@@ -179,12 +179,11 @@ namespace ads.Repository
                             long totalAPD = Convert.ToInt64(totalAPDDecimal);
                             Console.WriteLine(totalAPD);
 
-                            totalAPDs.Add(new TotalADS
+                            totalAPDs.Add(new TotalAdsChain
                             {
                                 Divisor = totalDiv,
                                 Sales = salesOut,
                                 Ads = totalAPD,
-                                Date = lastDate,
                                 Sku = f.Sku.ToString(),
                                 StartDate = lastDate,
                                 EndDate = firstDate
@@ -199,12 +198,11 @@ namespace ads.Repository
                             //long totalAPD = Convert.ToInt64(totalAPDDecimal);
                             //Console.WriteLine(totalAPD);
 
-                            totalAPDs.Add(new TotalADS
+                            totalAPDs.Add(new TotalAdsChain
                             {
                                 Divisor = totalDiv,
                                 Sales = 0,
                                 Ads = 0,
-                                Date = lastDate,
                                 Sku = f.Sku.ToString(),
                                 StartDate = lastDate,
                                 EndDate = firstDate
@@ -291,7 +289,7 @@ namespace ads.Repository
 
         }
 
-        public async Task<List<TotalADS>> GetTotalSkuAndClubsAsync(List<Inventory> listInventoryResult, List<Sale> listSalesResult, string dateListString)
+        public async Task<List<TotalAdsClub>> GetTotalSkuAndClubsAsync(List<Inventory> listInventoryResult, List<Sale> listSalesResult, string dateListString)
         {
             //Start Logs
             List<Logging> Log = new List<Logging>();
@@ -306,7 +304,7 @@ namespace ads.Repository
             string firstDate = fistDatePart.Trim('\'');
             string lastDate = lastDatePart.Trim('\'');
 
-            List<TotalADS> totalAPDs = new List<TotalADS>();
+            List<TotalAdsClub> totalAPDs = new List<TotalAdsClub>();
 
             try
             {
@@ -399,12 +397,11 @@ namespace ads.Repository
                             long totalAPD = Convert.ToInt64(totalAPDDecimal);
                             Console.WriteLine(totalAPD);
 
-                            totalAPDs.Add(new TotalADS
+                            totalAPDs.Add(new TotalAdsClub
                             {
                                 Divisor = totalDiv,
                                 Sales = salesOut,
                                 Ads = totalAPD,
-                                Date = lastDate,
                                 Sku = f.Sku,
                                 Clubs = f.Clubs,
                                 StartDate = lastDate,
@@ -413,12 +410,11 @@ namespace ads.Repository
                         }
                         else
                         {
-                            totalAPDs.Add(new TotalADS
+                            totalAPDs.Add(new TotalAdsClub
                             {
                                 Divisor = totalDiv,
                                 Sales = 0,
                                 Ads = 0,
-                                Date = lastDate,
                                 Sku = f.Sku,
                                 Clubs = f.Clubs,
                                 StartDate = lastDate,
@@ -506,7 +502,7 @@ namespace ads.Repository
 
         public async Task ComputeAds()
         {
-            _totalAdsChain = new List<TotalADS>();
+            _totalAdsChain = new List<TotalAdsChain>();
             var Log = new List<Logging>();
             var listData = new List<Sale>();
             var tasks = new List<Task>();
@@ -584,11 +580,11 @@ namespace ads.Repository
             var inventoryTotalDictionaryToday = _invetory.GetDictionayOfTotalInventory(inventoryToday);
             var inventoryTodayDictionaryDayZero = _invetory.GetDictionayOfTotalInventory(inventoryDayZero);
 
-            var adsWithCurrentsales = new List<TotalADS>();
+            var adsWithCurrentsales = new List<TotalAdsChain>();
 
-            var newEndDate = endDateOut.AddDays(1);
+
             var startDateInString = $"{CurrentDateWithZeroTime:yyyy-MM-dd HH:mm:ss.fff}";
-            var endDateInString = $"{newEndDate:yyyy-MM-dd HH:mm:ss.fff}";
+            var endDateInString = $"{endDateOut:yyyy-MM-dd HH:mm:ss.fff}";
 
 
             foreach (var sku in skus)
@@ -602,11 +598,14 @@ namespace ads.Repository
 
                     if (daysDifferenceOut == 56)
                     {
+                        var newEndDate = endDateOut.AddDays(1);
+                        var endDateInStringNew = $"{newEndDate:yyyy-MM-dd HH:mm:ss.fff}";
+
                         if (totalSalesOut > 0 || totalInvOut > 0)
                         {
                             ads.Sales -= totalSalesOut;
                             ads.Divisor--;
-                            ads.EndDate = endDateInString;
+                            ads.EndDate = endDateInStringNew;
                         }
                     }
 
@@ -616,7 +615,7 @@ namespace ads.Repository
 
             var adsWithCurrentsalesDictionary = adsWithCurrentsales.ToDictionary(x => x.Sku, y => y);
 
-            adsWithCurrentsales = new List<TotalADS>();
+            adsWithCurrentsales = new List<TotalAdsChain>();
 
             foreach (var sku in skus)
             {
@@ -638,7 +637,7 @@ namespace ads.Repository
                 }
                 else
                 {
-                    var newAds = new TotalADS()
+                    var newAds = new TotalAdsChain()
                     {
                         Divisor = 0,
                         Sales = 0,
@@ -675,7 +674,7 @@ namespace ads.Repository
             var inventoryDayZeroWithoutNullClubsDictionary = inventoryDayZeroWithoutNullClubs.ToDictionary(x => new { x.Sku, x.Clubs }, y => y.Inv);
             //var inventoryTodayWithoutNullClubsDictionary = inventoryTodayWithoutNullClubs.ToDictionary(x => new { x.Sku, x.Clubs }, y => y.Inv);
 
-            var adsPerClubsWithCurrentsales = new List<TotalADS>();
+            var adsPerClubsWithCurrentsales = new List<TotalAdsClub>();
 
             foreach (var inv in inventoryTodayWithoutNullClubs)
             {
@@ -691,11 +690,14 @@ namespace ads.Repository
                         salesDayZeroWithoutNullClubsDictionary.TryGetValue(new { inv.Sku, inv.Clubs }, out var perClubSalesDayZero);
                         inventoryDayZeroWithoutNullClubsDictionary.TryGetValue(new { inv.Sku, inv.Clubs }, out var perClubInvDayZero);
 
+                        var newEndDate = endDateOut.AddDays(1);
+                        var endDateInStringNew = $"{newEndDate:yyyy-MM-dd HH:mm:ss.fff}";
+
                         if (perClubSalesDayZero > 0 || perClubInvDayZero > 0)
                         {
                             adsOut.Sales -= perClubSalesDayZero;
                             adsOut.Divisor--;
-                            adsOut.EndDate = endDateInString;
+                            adsOut.EndDate = endDateInStringNew;
                         }
                     }
 
@@ -711,7 +713,7 @@ namespace ads.Repository
                 }
                 else
                 {
-                    var newAds = new TotalADS()
+                    var newAds = new TotalAdsClub()
                     {
                         Divisor = 0,
                         Sales = perClubSalesToday,
@@ -734,7 +736,7 @@ namespace ads.Repository
             await SaveAdsPerClubs(adsPerClubsWithCurrentsales, endDateInString);
         }
 
-        private async Task SaveAdsPerClubs(List<TotalADS> adsPerClubs, string lastDate)
+        private async Task SaveAdsPerClubs(List<TotalAdsClub> adsPerClubs, string lastDate)
         {
             var Log = new List<Logging>();
             var startLogs = DateTime.Now;
@@ -757,7 +759,7 @@ namespace ads.Repository
                             dataTable.Columns.Add("Sku", typeof(string));
                             dataTable.Columns.Add("Clubs", typeof(string));
                             dataTable.Columns.Add("Sales", typeof(decimal));
-                            dataTable.Columns.Add("Divisor", typeof(string));
+                            dataTable.Columns.Add("Divisor", typeof(int));
                             dataTable.Columns.Add("Ads", typeof(decimal));
                             dataTable.Columns.Add("StartDate", typeof(string));
                             dataTable.Columns.Add("EndDate", typeof(string));
@@ -809,7 +811,7 @@ namespace ads.Repository
             }
         }
 
-        private async Task SaveTotalAdsChain(List<TotalADS> totalAds, string lastDate)
+        private async Task SaveTotalAdsChain(List<TotalAdsChain> totalAds, string lastDate)
         {
             var Log = new List<Logging>();
             var startLogs = DateTime.Now;
@@ -831,9 +833,7 @@ namespace ads.Repository
                             dataTable.Columns.Add("Id", typeof(int));
                             dataTable.Columns.Add("Sku", typeof(string));
                             dataTable.Columns.Add("Sales", typeof(decimal));
-                            //dataTable.Columns.Add("Inventory", typeof(decimal));
-                            dataTable.Columns.Add("Divisor", typeof(string));
-                            //dataTable.Columns.Add("Date", typeof(string));
+                            dataTable.Columns.Add("Divisor", typeof(int));
                             dataTable.Columns.Add("Ads", typeof(decimal));
                             dataTable.Columns.Add("StartDate", typeof(string));
                             dataTable.Columns.Add("EndDate", typeof(string));
@@ -957,7 +957,7 @@ namespace ads.Repository
                         command.Parameters.AddWithValue("@PageSize", pageSize);
                         command.Parameters.AddWithValue("@dateListString", dateListString);
                         command.CommandTimeout = 18000;
-                        var test1 = new List<TotalADS>();
+                        var test1 = new List<TotalAdsChain>();
                         con.Open();
 
                         // Open the connection and execute the command
@@ -968,7 +968,7 @@ namespace ads.Repository
                         {
                             var startDate = reader["StartDate"].ToString();
 
-                            var ads = new TotalADS
+                            var ads = new TotalAdsChain
                             {
                                 Sku = reader["Sku"].ToString(),
                                 Sales = Convert.ToDecimal(reader["Sales"].ToString()),
@@ -1011,22 +1011,17 @@ namespace ads.Repository
             string strConn = "data source='199.84.0.201';Initial Catalog=ADS.UAT;User Id=sa;password=@dm1n@8800;Trusted_Connection=false;MultipleActiveResultSets=true;TrustServerCertificate=True;";
             var con = new SqlConnection(strConn);
 
-            var Log = new List<Logging>();
-            DateTime startLogs = DateTime.Now;
-
-            try
+            await Task.Run(() =>
             {
-                await Task.Run(() =>
+                using (var command = new SqlCommand("_sp_GetTblDataSample4", con))
                 {
-                    using (var command = new SqlCommand("_sp_GetTblDataSample4", con))
-                    {
-                        command.CommandType = CommandType.StoredProcedure;
-                        command.Parameters.AddWithValue("@Offset", offset);
-                        command.Parameters.AddWithValue("@PageSize", pageSize);
-                        command.Parameters.AddWithValue("@dateListString", dateListString);
-                        command.CommandTimeout = 18000;
-                        var totalAdsPerClubs = new List<TotalADS>();
-                        con.Open();
+                    command.CommandType = CommandType.StoredProcedure;
+                    command.Parameters.AddWithValue("@Offset", offset);
+                    command.Parameters.AddWithValue("@PageSize", pageSize);
+                    command.Parameters.AddWithValue("@dateListString", dateListString);
+                    command.CommandTimeout = 18000;
+                    var totalAdsPerClubs = new List<TotalAdsClub>();
+                    con.Open();
 
                         // Open the connection and execute the command
                         SqlDataReader reader = command.ExecuteReader();
@@ -1036,16 +1031,16 @@ namespace ads.Repository
                         {
                             var startDate = reader.GetString("StartDate");
 
-                            var ads = new TotalADS
-                            {
-                                Sku = reader["Sku"].ToString(),
-                                Sales = Convert.ToDecimal(reader["Sales"].ToString()),
-                                Clubs = reader["Clubs"].ToString(),
-                                Ads = Convert.ToDecimal(reader["Ads"].ToString()),
-                                Divisor = Convert.ToInt32(reader["Divisor"].ToString()),
-                                StartDate = startDate,
-                                EndDate = reader.GetString("EndDate")
-                            };
+                        var ads = new TotalAdsClub
+                        {
+                            Sku = reader["Sku"].ToString(),
+                            Sales = Convert.ToDecimal(reader["Sales"].ToString()),
+                            Clubs = reader["Clubs"].ToString(),
+                            Ads = Convert.ToDecimal(reader["Ads"].ToString()),
+                            Divisor = Convert.ToInt32(reader["Divisor"].ToString()),
+                            StartDate = startDate,
+                            EndDate = reader.GetString("EndDate")
+                        };
 
                             totalAdsPerClubs.Add(ads);
                         }

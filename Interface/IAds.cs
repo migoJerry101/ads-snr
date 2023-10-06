@@ -4,9 +4,9 @@ namespace ads.Interface
 {
     public interface IAds
     {
-        Task<List<TotalADS>> GetComputation(string startDate);
-        Task<List<TotalADS>> GetTotalApdAsync(List<Inventory> listInventoryResult, List<Sale> listSalesResult, string dateListString);
-        Task<List<TotalADS>> GetTotalSkuAndClubsAsync(List<Inventory> listInventoryResult, List<Sale> listSalesResult, string dateListString);
+        Task<List<TotalAdsChain>> GetComputation(string startDate);
+        Task<List<TotalAdsChain>> GetTotalApdAsync(List<Inventory> listInventoryResult, List<Sale> listSalesResult, string dateListString);
+        Task<List<TotalAdsClub>> GetTotalSkuAndClubsAsync(List<Inventory> listInventoryResult, List<Sale> listSalesResult, string dateListString);
         Task ComputeAds();
     }
 }
