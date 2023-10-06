@@ -391,5 +391,6 @@ FodyWeavers.xsd
 /SNRshopping.WMS/wwwroot/css/jquery.dataTables.min.js
 
 
-.vs/
 obj/
+.vs/
+*.user
