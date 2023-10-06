@@ -693,7 +693,7 @@ namespace ads.Repository
                 }
                 else
                 {
-                    var currentDateCheck = CurrentDateWithZeroTime;
+                    var currentDateCheck = DateTime.Now;
                     clubsDictionary.TryGetValue(Convert.ToInt32(inv.Clubs), out var StartDate);
 
                     if (currentDateCheck > StartDate)
