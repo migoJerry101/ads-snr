@@ -171,7 +171,7 @@ namespace ads.Repository
                     EndLog = endLogs,
                     Action = "Sales",
                     Message = "Total Rows Inserted : " + listOfOledb.Count + "",
-                    Record_Date = start
+                    Record_Date = dateConvertion.ConvertStringDate(start)
                 });
 
                 _logs.InsertLogs(Log);
@@ -186,8 +186,8 @@ namespace ads.Repository
                     StartLog = startLogs,
                     EndLog = endLogs,
                     Action = "Error",
-                    Message = "Sales : " + e.Message + " : Date : " + start + "",
-                    Record_Date = start
+                    Message = "GetSalesAsync : " + e.Message + " ",
+                    Record_Date = dateConvertion.ConvertStringDate(start)
                 });
 
                 _logs.InsertLogs(Log);
@@ -200,6 +200,10 @@ namespace ads.Repository
 
         public async Task GetAllSales(string dateListString, int pageSize, int offset, OledbCon db)
         {
+            DateTime startLogs = DateTime.Now;
+
+            List<Logging> Log = new List<Logging>();
+
             try
             {
                 await Task.Run(() =>
@@ -249,6 +253,18 @@ namespace ads.Repository
             catch (Exception e)
             {
                 Console.WriteLine("Error: " + e.Message);
+
+                DateTime endLogs = DateTime.Now;
+                Log.Add(new Logging
+                {
+                    StartLog = startLogs,
+                    EndLog = endLogs,
+                    Action = "Error",
+                    Message = "GetAllSales : " + e.Message + " ",
+                    Record_Date = dateConvertion.ConvertStringDate(dateListString)
+                });
+
+                _logs.InsertLogs(Log);
             }
         }
 

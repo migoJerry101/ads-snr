@@ -6,7 +6,7 @@
         public DateTime EndLog { get; set; }
         public string? Action { get; set; }
         public string? Message { get; set; }
-        public string? Record_Date { get; set; }
+        public DateTime Record_Date { get; set; }
 
     }
 }

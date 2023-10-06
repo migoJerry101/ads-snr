@@ -262,7 +262,7 @@ namespace ads.Repository
                         EndLog = endLogs,
                         Action = "Total ADS",
                         Message = "Total Sku Inserted : " + totalAPDs.Count() + "",
-                        Record_Date = lastDate
+                        Record_Date = dateConvertion.ConvertStringDate(lastDate)
                     });
 
                     localQuery.InsertLogs(Log);
@@ -278,8 +278,8 @@ namespace ads.Repository
                     StartLog = startLogs,
                     EndLog = endLogs,
                     Action = "Error",
-                    Message = "Total Sku  : " + e.Message + "",
-                    Record_Date = lastDate
+                    Message = "GetTotalApdAsync  : " + e.Message + "",
+                    Record_Date = dateConvertion.ConvertStringDate(lastDate)
                 });
 
                 localQuery.InsertLogs(Log);
@@ -430,7 +430,6 @@ namespace ads.Repository
                 {
                     await db.OpenAsync();
 
-
                     //Bluk insert
                     using (var transaction = db.Con.BeginTransaction())
                     {
@@ -474,7 +473,7 @@ namespace ads.Repository
                         EndLog = endLogs,
                         Action = "Total ADS",
                         Message = "Total Clubs Inserted : " + totalAPDs.Count() + "",
-                        Record_Date = lastDate
+                        Record_Date = dateConvertion.ConvertStringDate(lastDate)
                     });
 
                     localQuery.InsertLogs(Log);
@@ -491,8 +490,8 @@ namespace ads.Repository
                     StartLog = startLogs,
                     EndLog = endLogs,
                     Action = "Error",
-                    Message = "Total Clubs : " + e.Message + "",
-                    Record_Date = lastDate
+                    Message = "GetTotalSkuAndClubsAsync : " + e.Message + "",
+                    Record_Date = dateConvertion.ConvertStringDate(lastDate)
                 });
 
                 localQuery.InsertLogs(Log);
@@ -544,8 +543,6 @@ namespace ads.Repository
             DateTime.TryParseExact(adsDayZeor, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime endDateOut);
             TimeSpan difference = startDateOut - endDateOut;
             var daysDifference = difference.Days;
-
-
 
             using (OledbCon db = new OledbCon())
             {
@@ -792,7 +789,7 @@ namespace ads.Repository
                         EndLog = endLogs,
                         Action = "Total ADS",
                         Message = "Total Clubs Inserted : " + adsPerClubs.Count() + "",
-                        Record_Date = lastDate
+                        Record_Date = dateConvertion.ConvertStringDate(lastDate)
                     });
 
                     localQuery.InsertLogs(Log);
@@ -806,8 +803,8 @@ namespace ads.Repository
                     StartLog = startLogs,
                     EndLog = endLogs,
                     Action = "Error",
-                    Message = "Total Sku  : " + e.Message + "",
-                    Record_Date = lastDate
+                    Message = "SaveAdsPerClubs  : " + e.Message + "",
+                    Record_Date = dateConvertion.ConvertStringDate(lastDate)
                 });
 
                 localQuery.InsertLogs(Log);
@@ -867,7 +864,7 @@ namespace ads.Repository
                         EndLog = endLogs,
                         Action = "Total ADS",
                         Message = "Total Sku Inserted : " + totalAds.Count() + "",
-                        Record_Date = lastDate
+                        Record_Date = dateConvertion.ConvertStringDate(lastDate)
                     });
 
                     localQuery.InsertLogs(Log);
@@ -881,8 +878,8 @@ namespace ads.Repository
                     StartLog = startLogs,
                     EndLog = endLogs,
                     Action = "Error",
-                    Message = "Total Sku  : " + e.Message + "",
-                    Record_Date = lastDate
+                    Message = "SaveTotalAdsChain  : " + e.Message + "",
+                    Record_Date = dateConvertion.ConvertStringDate(lastDate)
                 });
 
                 localQuery.InsertLogs(Log);
@@ -914,6 +911,7 @@ namespace ads.Repository
 
             return totalCount;
         }
+
         private async Task<int> GetCountAdsByDate(string dateListString)
         {
             int totalCount = 0;
@@ -940,11 +938,13 @@ namespace ads.Repository
             return totalCount;
         }
 
-
         public async Task GetAverageSalesChainByDate(string dateListString, int pageSize, int offset)
         {
             string strConn = "data source='199.84.0.201';Initial Catalog=ADS.UAT;User Id=sa;password=@dm1n@8800;Trusted_Connection=false;MultipleActiveResultSets=true;TrustServerCertificate=True;";
             var con = new SqlConnection(strConn);
+
+            var Log = new List<Logging>();
+            DateTime startLogs = DateTime.Now;
 
             await Task.Run(() =>
             {
@@ -989,6 +989,18 @@ namespace ads.Repository
                 catch (Exception e)
                 {
                     var test = e.Message;
+
+                    DateTime endLogs = DateTime.Now;
+                    Log.Add(new Logging
+                    {
+                        StartLog = startLogs,
+                        EndLog = endLogs,
+                        Action = "Error",
+                        Message = "GetAverageSalesChainByDate  : " + e.Message + "",
+                        Record_Date = dateConvertion.ConvertStringDate(dateListString)
+                    });
+
+                    localQuery.InsertLogs(Log);
                 }
 
             });
@@ -1011,13 +1023,13 @@ namespace ads.Repository
                     var totalAdsPerClubs = new List<TotalAdsClub>();
                     con.Open();
 
-                    // Open the connection and execute the command
-                    SqlDataReader reader = command.ExecuteReader();
+                        // Open the connection and execute the command
+                        SqlDataReader reader = command.ExecuteReader();
 
-                    // Process the result set
-                    while (reader.Read())
-                    {
-                        var startDate = reader.GetString("StartDate");
+                        // Process the result set
+                        while (reader.Read())
+                        {
+                            var startDate = reader.GetString("StartDate");
 
                         var ads = new TotalAdsClub
                         {
@@ -1030,14 +1042,29 @@ namespace ads.Repository
                             EndDate = reader.GetString("EndDate")
                         };
 
-                        totalAdsPerClubs.Add(ads);
-                    }
+                            totalAdsPerClubs.Add(ads);
+                        }
 
-                    _totalAdsClubs.AddRange(totalAdsPerClubs);
-                    reader.Close();
-                    con.Close();
-                }
-            });
+                        _totalAdsClubs.AddRange(totalAdsPerClubs);
+                        reader.Close();
+                        con.Close();
+                    }
+                });
+            }
+            catch (Exception e)
+            {
+                DateTime endLogs = DateTime.Now;
+                Log.Add(new Logging
+                {
+                    StartLog = startLogs,
+                    EndLog = endLogs,
+                    Action = "Error",
+                    Message = "GetAverageSalesPerClubsByDate  : " + e.Message + "",
+                    Record_Date = dateConvertion.ConvertStringDate(dateListString)
+                });
+
+                localQuery.InsertLogs(Log);
+            }
         }
     }
 }

@@ -1,13 +1,18 @@
 ﻿using ads.Data;
 using ads.Interface;
 using ads.Models.Data;
+using ads.Utility;
 using Microsoft.Data.SqlClient;
 using System.Data;
+using static System.Reflection.Metadata.BlobBuilder;
 
 namespace ads.Repository
 {
     public class OpenQueryRepo : IOpenQuery
     {
+        private readonly DateConvertion dateConvertion = new DateConvertion();
+
+        private readonly ILogs _logs;
 
         //ListINVMST - List of All SKU Filter ISTYPE = ''01'' AND IDSCCD IN (''A'',''I'',''D'',''P'') AND IATRB1 IN (''L'',''I'',''LI'')
         //ISTYPE - Type of SKU
@@ -17,24 +22,46 @@ namespace ads.Repository
         {
             List<GeneralModel> list = new List<GeneralModel>();
 
-            string query = "select * from Openquery([snr], 'SELECT INUMBR from MMJDALIB.INVMST WHERE ISTYPE = ''01'' AND IDSCCD IN (''A'',''I'',''D'',''P'') AND IATRB1 IN (''L'',''I'',''LI'')')";
+            List<Logging> Log = new List<Logging>();
 
-            using (SqlCommand cmd = new SqlCommand(query, db.Con))
+            DateTime startLogs = DateTime.Now;
+
+            try 
             {
-                cmd.CommandTimeout = 18000;
+                string query = "select * from Openquery([snr], 'SELECT INUMBR from MMJDALIB.INVMST WHERE ISTYPE = ''01'' AND IDSCCD IN (''A'',''I'',''D'',''P'') AND IATRB1 IN (''L'',''I'',''LI'')')";
 
-                using (var reader = await cmd.ExecuteReaderAsync())
+                using (SqlCommand cmd = new SqlCommand(query, db.Con))
                 {
-                    while (await reader.ReadAsync())
-                    {
-                        GeneralModel Olde = new GeneralModel
-                        {
-                            INUMBR = reader["INUMBR"].ToString()
-                        };
+                    cmd.CommandTimeout = 18000;
 
-                        list.Add(Olde);
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            GeneralModel Olde = new GeneralModel
+                            {
+                                INUMBR = reader["INUMBR"].ToString()
+                            };
+
+                            list.Add(Olde);
+                        }
                     }
                 }
+            }
+            catch (Exception e) 
+            {
+                DateTime endLogs = DateTime.Now;
+                Log.Add(new Logging
+                {
+                    StartLog = startLogs,
+                    EndLog = endLogs,
+                    Action = "Error",
+                    Message = "ListOfAllSKu : " + e.Message + " ",
+                    Record_Date = Convert.ToDateTime(startLogs.ToString("yyyy-MM-dd 00:00:00.000"))
+
+                });
+
+                _logs.InsertLogs(Log);
             }
 
             return list.ToList();
@@ -45,28 +72,50 @@ namespace ads.Repository
         {
             List<GeneralModel> list = new List<GeneralModel>();
 
-            //string query = "select * from Openquery([snr], 'SELECT CSSKU, CSDATE, MAX(CSSTOR) CSSTOR, SUM(CSQTY) CSQTY from MMJDALIB.CSHDET where CSDATE BETWEEN ''" + start + "'' AND ''" + end + "'' GROUP BY CSSKU ,CSDATE ')";
-            string query = "select * from Openquery([snr], 'SELECT CSSKU, CSDATE, CSSTOR, CASE WHEN SUM(CSQTY) < 0 THEN 0 ELSE SUM(CSQTY) END AS CSQTY from MMJDALIB.CSHDET where CSDATE BETWEEN ''" + start + "'' AND ''" + end + "'' GROUP BY CSSKU, CSSTOR ,CSDATE ')";
+            List<Logging> Log = new List<Logging>();
 
-            using (SqlCommand cmd = new SqlCommand(query, db.Con))
+            DateTime startLogs = DateTime.Now;
+
+            try
             {
-                cmd.CommandTimeout = 18000;
+                //string query = "select * from Openquery([snr], 'SELECT CSSKU, CSDATE, MAX(CSSTOR) CSSTOR, SUM(CSQTY) CSQTY from MMJDALIB.CSHDET where CSDATE BETWEEN ''" + start + "'' AND ''" + end + "'' GROUP BY CSSKU ,CSDATE ')";
+                string query = "select * from Openquery([snr], 'SELECT CSSKU, CSDATE, CSSTOR, CASE WHEN SUM(CSQTY) < 0 THEN 0 ELSE SUM(CSQTY) END AS CSQTY from MMJDALIB.CSHDET where CSDATE BETWEEN ''" + start + "'' AND ''" + end + "'' GROUP BY CSSKU, CSSTOR ,CSDATE ')";
 
-                using (var reader = await cmd.ExecuteReaderAsync())
+                using (SqlCommand cmd = new SqlCommand(query, db.Con))
                 {
-                    while (await reader.ReadAsync())
-                    {
-                        GeneralModel Olde = new GeneralModel
-                        {
-                            CSDATE = reader["CSDATE"].ToString(),
-                            CSSTOR = reader["CSSTOR"].ToString(),
-                            CSSKU = reader["CSSKU"].ToString(),
-                            CSQTY = Convert.ToDecimal(reader["CSQTY"].ToString())
-                        };
+                    cmd.CommandTimeout = 18000;
 
-                        list.Add(Olde);
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            GeneralModel Olde = new GeneralModel
+                            {
+                                CSDATE = reader["CSDATE"].ToString(),
+                                CSSTOR = reader["CSSTOR"].ToString(),
+                                CSSKU = reader["CSSKU"].ToString(),
+                                CSQTY = Convert.ToDecimal(reader["CSQTY"].ToString())
+                            };
+
+                            list.Add(Olde);
+                        }
                     }
                 }
+            }
+            catch (Exception e)
+            {
+                DateTime endLogs = DateTime.Now;
+                Log.Add(new Logging
+                {
+                    StartLog = startLogs,
+                    EndLog = endLogs,
+                    Action = "Error",
+                    Message = "ListOfSales : " + e.Message + " ",
+                    Record_Date = Convert.ToDateTime(startLogs.ToString("yyyy-MM-dd 00:00:00.000"))
+
+                });
+
+                _logs.InsertLogs(Log);
             }
 
             return list.ToList();
@@ -77,31 +126,53 @@ namespace ads.Repository
         {
             List<GeneralModel> list = new List<GeneralModel>();
 
-            //string query = "select * from Openquery([snr], 'SELECT INUMBR ,Max(ISTORE) ISTORE , CASE WHEN SUM(IBHAND) < 0 THEN 0 ELSE SUM(IBHAND) END AS IBHAND from MMJDALIB.INVBAL GROUP BY INUMBR')";
-            string query = "select * from Openquery([snr], 'SELECT INUMBR ,ISTORE, CASE WHEN MAX(IBHAND) < 0 THEN 0 ELSE MAX(IBHAND) END AS IBHAND from MMJDALIB.INVBAL GROUP BY INUMBR ,ISTORE')";
-            //string query = "select * from Openquery([snr], 'SELECT MST.INUMBR, MAX(BAL.ISTORE) ISTORE, SUM(BAL.IBHAND) IBHAND from MMJDALIB.INVMST as MST " +
-            //    "INNER JOIN MMJDALIB.INVBAL as BAL on MST.INUMBR = BAL.INUMBR " +
-            //    "WHERE MST.ISTYPE = ''01'' AND MST.IDSCCD IN (''A'',''I'',''D'',''P'') AND MST.IATRB1 IN (''L'',''I'',''LI'') " +
-            //    "GROUP BY MST.INUMBR')";
+            List<Logging> Log = new List<Logging>();
 
-            using (SqlCommand cmd = new SqlCommand(query, db.Con))
+            DateTime startLogs = DateTime.Now;
+
+            try
             {
-                cmd.CommandTimeout = 18000;
+                //string query = "select * from Openquery([snr], 'SELECT INUMBR ,Max(ISTORE) ISTORE , CASE WHEN SUM(IBHAND) < 0 THEN 0 ELSE SUM(IBHAND) END AS IBHAND from MMJDALIB.INVBAL GROUP BY INUMBR')";
+                string query = "select * from Openquery([snr], 'SELECT INUMBR ,ISTORE, CASE WHEN MAX(IBHAND) < 0 THEN 0 ELSE MAX(IBHAND) END AS IBHAND from MMJDALIB.INVBAL GROUP BY INUMBR ,ISTORE')";
+                //string query = "select * from Openquery([snr], 'SELECT MST.INUMBR, MAX(BAL.ISTORE) ISTORE, SUM(BAL.IBHAND) IBHAND from MMJDALIB.INVMST as MST " +
+                //    "INNER JOIN MMJDALIB.INVBAL as BAL on MST.INUMBR = BAL.INUMBR " +
+                //    "WHERE MST.ISTYPE = ''01'' AND MST.IDSCCD IN (''A'',''I'',''D'',''P'') AND MST.IATRB1 IN (''L'',''I'',''LI'') " +
+                //    "GROUP BY MST.INUMBR')";
 
-                using (var reader = await cmd.ExecuteReaderAsync())
+                using (SqlCommand cmd = new SqlCommand(query, db.Con))
                 {
-                    while (await reader.ReadAsync())
-                    {
-                        GeneralModel Olde = new GeneralModel
-                        {
-                            INUMBR2 = reader["INUMBR"].ToString(),
-                            ISTORE = reader["ISTORE"].ToString(),
-                            IBHAND = Convert.ToDecimal(reader["IBHAND"].ToString())
-                        };
+                    cmd.CommandTimeout = 18000;
 
-                        list.Add(Olde);
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            GeneralModel Olde = new GeneralModel
+                            {
+                                INUMBR2 = reader["INUMBR"].ToString(),
+                                ISTORE = reader["ISTORE"].ToString(),
+                                IBHAND = Convert.ToDecimal(reader["IBHAND"].ToString())
+                            };
+
+                            list.Add(Olde);
+                        }
                     }
                 }
+            }
+            catch (Exception e)
+            {
+                DateTime endLogs = DateTime.Now;
+                Log.Add(new Logging
+                {
+                    StartLog = startLogs,
+                    EndLog = endLogs,
+                    Action = "Error",
+                    Message = "ListIventory : " + e.Message + " ",
+                    Record_Date = Convert.ToDateTime(startLogs.ToString("yyyy-MM-dd 00:00:00.000"))
+
+                });
+
+                _logs.InsertLogs(Log);
             }
 
             return list.ToList();
@@ -114,24 +185,44 @@ namespace ads.Repository
         {
             List<GeneralModel> list = new List<GeneralModel>();
 
-            string query = "select * from Openquery([snr], 'SELECT STRNUM from MMJDALIB.TBLSTR WHERE STPOLL = ''Y'' AND STSDAT > 0')";
+            List<Logging> Log = new List<Logging>();
 
-            using (SqlCommand cmd = new SqlCommand(query, db.Con))
+            DateTime startLogs = DateTime.Now;
+
+            try
             {
-                cmd.CommandTimeout = 18000;
+                string query = "select * from Openquery([snr], 'SELECT STRNUM from MMJDALIB.TBLSTR WHERE STPOLL = ''Y'' AND STSDAT > 0')";
 
-                using (var reader = await cmd.ExecuteReaderAsync())
+                using (SqlCommand cmd = new SqlCommand(query, db.Con))
                 {
-                    while (await reader.ReadAsync())
-                    {
-                        GeneralModel Olde = new GeneralModel
-                        {
-                            STRNUM = reader["STRNUM"].ToString()
-                        };
+                    cmd.CommandTimeout = 18000;
 
-                        list.Add(Olde);
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            GeneralModel Olde = new GeneralModel
+                            {
+                                STRNUM = reader["STRNUM"].ToString()
+                            };
+
+                            list.Add(Olde);
+                        }
                     }
                 }
+            }
+            catch(Exception e) 
+            {
+                DateTime endLogs = DateTime.Now;
+                Log.Add(new Logging
+                {
+                    StartLog = startLogs,
+                    EndLog = endLogs,
+                    Action = "Error",
+                    Message = "ListOfAllStore : " + e.Message + " ",
+                    Record_Date = Convert.ToDateTime(startLogs.ToString("yyyy-MM-dd 00:00:00.000"))
+
+                });
             }
 
             return list.ToList();

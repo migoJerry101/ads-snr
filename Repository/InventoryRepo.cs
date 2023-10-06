@@ -136,7 +136,7 @@ namespace ads.Repository
                     EndLog = endLogs,
                     Action = "Inventory",
                     Message = "Total Rows Inserted : " + ListInventory.Count + "",
-                    Record_Date = start
+                    Record_Date = dateConvertion.ConvertStringDate(start)
                 });
 
                 _logs.InsertLogs(Log);
@@ -154,8 +154,8 @@ namespace ads.Repository
                     StartLog = startLogs,
                     EndLog = endLogs,
                     Action = "Error",
-                    Message = "Inventory : " + e.Message + " ",
-                    Record_Date = start
+                    Message = "GetInventoryAsync : " + e.Message + " ",
+                    Record_Date = dateConvertion.ConvertStringDate(start)
                 });
 
                 _logs.InsertLogs(Log);
@@ -252,7 +252,7 @@ namespace ads.Repository
                     EndLog = endLogs,
                     Action = "Error",
                     Message = "GetInventories : " + e.Message + " ",
-                    Record_Date = dateListString
+                    Record_Date = dateConvertion.ConvertStringDate(dateListString)  
                 });
 
                 _logs.InsertLogs(Log);

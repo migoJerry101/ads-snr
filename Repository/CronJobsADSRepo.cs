@@ -19,6 +19,7 @@ using static System.Net.WebRequestMethods;
 using System;
 using Azure.Core.GeoJson;
 using ads.Interface;
+using ads.Utility;
 //Final Code
 namespace ads.Repository
 {
@@ -28,6 +29,10 @@ namespace ads.Repository
         private readonly ISales _sales;
         private readonly IAds _ads;
         private readonly IOpenQuery _openQuery;
+
+        private readonly DateConvertion dateConvertion = new DateConvertion();
+
+        private readonly LogsRepo localQuery = new LogsRepo();
 
         public CronJobsADSRepo(IInvetory invetory, ISales sales, IAds ads, IOpenQuery openQuery)
         {
@@ -43,17 +48,24 @@ namespace ads.Repository
             string message = "This job will be executed again at: " +
             context.NextFireTimeUtc.ToString();
 
+            //Start Logs
+            List<Logging> Log = new List<Logging>();
+
+            //Star logs Date Time
+            DateTime startLogs = DateTime.Now;
+
+            // Get the current date
+            DateTime currentDate = DateTime.Now;
+
+            // Subtract one day
+            DateTime previousDate = currentDate.AddDays(-1);
+
+            ////////Actual Record or Final Setup
+            string startDate = previousDate.ToString("yyMMdd");
+            string endDate = previousDate.ToString("yyMMdd");
+
             try
             {
-                // Get the current date
-                DateTime currentDate = DateTime.Now;
-
-                // Subtract one day
-                DateTime previousDate = currentDate.AddDays(-1);
-
-                ////////Actual Record or Final Setup
-                string startDate = previousDate.ToString("yyMMdd");
-                string endDate = previousDate.ToString("yyMMdd");
 
                 using (OledbCon db = new OledbCon())
                 {
@@ -69,10 +81,25 @@ namespace ads.Repository
                 }
 
                 await _ads.ComputeAds();
+
             }
             catch (Exception e)
             {
                 Console.WriteLine(e.Message);
+
+                Console.WriteLine(e.Message);
+                DateTime endLogs = DateTime.Now;
+                Log.Add(new Logging
+                {
+                    StartLog = startLogs,
+                    EndLog = endLogs,
+                    Action = "Error",
+                    Message = "Execute CronJobs : " + e.Message + "",
+                    Record_Date = dateConvertion.ConvertStringDate(startDate) 
+                });
+
+                localQuery.InsertLogs(Log);
+
                 throw;
             }
 

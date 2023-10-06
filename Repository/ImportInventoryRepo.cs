@@ -122,7 +122,7 @@ namespace ads.Repository
                     EndLog = endLogs,
                     Action = "Inventory",
                     Message = "Total Inventory Inserted : " + ListInventory.Count + "",
-                    Record_Date = start
+                    Record_Date = Convert.ToDateTime(start)
                 });
 
                 _logs.InsertLogs(Log);
@@ -141,7 +141,7 @@ namespace ads.Repository
                     EndLog = endLogs,
                     Action = "Error",
                     Message = "Error Inserted : " + e.Message + "," + start + " ",
-                    Record_Date = start
+                    Record_Date = Convert.ToDateTime(start)
                 });
 
                 _logs.InsertLogs(Log);
