@@ -17,7 +17,7 @@ namespace ads.Repository
 {
     public class AdsRepo : IAds
     {
-        private readonly OpenQueryRepo openQuery = new OpenQueryRepo();
+/*        private readonly OpenQueryRepo openQuery = new OpenQueryRepo();*/
         private readonly LogsRepo localQuery = new LogsRepo();
         public List<TotalAdsChain> _totalAdsChain = new List<TotalAdsChain>();
         public List<TotalAdsClub> _totalAdsClubs = new List<TotalAdsClub>();

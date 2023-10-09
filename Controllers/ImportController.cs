@@ -14,13 +14,15 @@ namespace ads.Controllers
         private readonly ISales _sales;
         private readonly IAds _ads;
         private readonly IOpenQuery _openQuery;
+        private readonly IInventoryBackup _inventoryBackup;
 
-        public ImportController(IInvetory invetory, ISales sales, IAds ads, IOpenQuery openQuery)
+        public ImportController(IInvetory invetory, ISales sales, IAds ads, IOpenQuery openQuery, IInventoryBackup inventoryBackup)
         {
             _invetory = invetory;
             _sales = sales;
             _ads = ads;
             _openQuery = openQuery;
+            _inventoryBackup = inventoryBackup;
         }
 
         [HttpPost]
@@ -89,6 +91,15 @@ namespace ads.Controllers
 
                 return Ok();
             }
+        }
+
+        [HttpPost]
+        [Route("ImportInventoryBackUp")]
+        public async Task<IActionResult> ImportInventoryBackUp()
+        {
+            //await _inventoryBackup.ManualImport();
+
+            return Ok();
         }
     }
 }
