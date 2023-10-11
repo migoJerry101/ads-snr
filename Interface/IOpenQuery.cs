@@ -11,5 +11,6 @@ namespace ads.Interface
         Task<List<GeneralModel>> ListOfAllStore(OledbCon db);
         Task ImportClubs(OledbCon db);
         Task ImportItems(OledbCon db);
+        Task<List<string>> ListIventorySkuPerClub(OledbCon db, string club);
     }
 }

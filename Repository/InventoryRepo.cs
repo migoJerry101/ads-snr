@@ -375,5 +375,15 @@ namespace ads.Repository
 
             return inventoryDictionary;
         }
+
+        public Dictionary<string, decimal> GetDictionayOfPerClubhlInventory(List<Inventory> inventories)
+        {
+            var inventoryDictionary = inventories.GroupBy(x => $"{x.Sku}{x.Clubs}").ToDictionary(
+                group => group.Key,
+                group => group.Sum(item => item.Inv)
+            );
+
+            return inventoryDictionary;
+        }
     }
 }

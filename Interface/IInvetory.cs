@@ -11,5 +11,6 @@ namespace ads.Interface
         Task<int> CountInventory(string dateListString, OledbCon db);
         Task<List<Inventory>> GetInventoriesByDate(DateTime date);
         Dictionary<string, decimal> GetDictionayOfTotalInventory(List<Inventory> inventories);
+        Dictionary<string, decimal> GetDictionayOfPerClubhlInventory(List<Inventory> inventories);
     }
 }

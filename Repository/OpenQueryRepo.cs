@@ -18,6 +18,10 @@ namespace ads.Repository
         //ISTYPE - Type of SKU
         //IDSCCD - Status of SKU
         //IATRB1 - Attribute of SKU
+        public OpenQueryRepo(ILogs logs)
+        {
+            _logs = logs;
+        }
         public async Task<List<GeneralModel>> ListOfAllSKu(OledbCon db)
         {
             List<GeneralModel> list = new List<GeneralModel>();
@@ -33,6 +37,11 @@ namespace ads.Repository
                 using (SqlCommand cmd = new SqlCommand(query, db.Con))
                 {
                     cmd.CommandTimeout = 18000;
+
+                    if (db.Con.State == ConnectionState.Closed)
+                    {
+                        db.Con.Open();
+                    }
 
                     using (var reader = await cmd.ExecuteReaderAsync())
                     {
@@ -84,6 +93,11 @@ namespace ads.Repository
                 using (SqlCommand cmd = new SqlCommand(query, db.Con))
                 {
                     cmd.CommandTimeout = 18000;
+
+                    if (db.Con.State == ConnectionState.Closed)
+                    {
+                        db.Con.Open();
+                    }
 
                     using (var reader = await cmd.ExecuteReaderAsync())
                     {
@@ -141,6 +155,11 @@ namespace ads.Repository
 
                 using (SqlCommand cmd = new SqlCommand(query, db.Con))
                 {
+                    if (db.Con.State == ConnectionState.Closed)
+                    {
+                        db.Con.Open();
+                    }
+
                     cmd.CommandTimeout = 18000;
 
                     using (var reader = await cmd.ExecuteReaderAsync())
@@ -195,6 +214,11 @@ namespace ads.Repository
 
                 using (SqlCommand cmd = new SqlCommand(query, db.Con))
                 {
+                    if (db.Con.State == ConnectionState.Closed)
+                    {
+                        db.Con.Open();
+                    }
+
                     cmd.CommandTimeout = 18000;
 
                     using (var reader = await cmd.ExecuteReaderAsync())
@@ -223,6 +247,8 @@ namespace ads.Repository
                     Record_Date = Convert.ToDateTime(startLogs.ToString("yyyy-MM-dd 00:00:00.000"))
 
                 });
+
+                _logs.InsertLogs(Log);
             }
 
             return list.ToList();
@@ -310,8 +336,6 @@ namespace ads.Repository
                             transaction.Commit();
                         }
                     }
-
-                    db.Con.Close();
                 }
             }
             catch (Exception e)
@@ -325,6 +349,8 @@ namespace ads.Repository
                     Message = "ListOfAllStore : " + e.Message + " ",
                     Record_Date = Convert.ToDateTime(startLogs.ToString("yyyy-MM-dd 00:00:00.000"))
                 });
+
+                _logs.InsertLogs(Log);
             }
         }
 
@@ -399,8 +425,6 @@ namespace ads.Repository
                             transaction.Commit();
                         }
                     }
-
-                    db.Con.Close();
                 }
             }
             catch (Exception e)
@@ -418,6 +442,63 @@ namespace ads.Repository
 
                 _logs.InsertLogs(Log);
             }
+        }
+
+        public async Task<List<string>> ListIventorySkuPerClub(OledbCon db, string club)
+        {
+            var list = new List<string>();
+
+            List<Logging> Log = new List<Logging>();
+
+            DateTime startLogs = DateTime.Now;
+
+            try
+            {
+                //string query = "select * from Openquery([snr], 'SELECT INUMBR ,Max(ISTORE) ISTORE , CASE WHEN SUM(IBHAND) < 0 THEN 0 ELSE SUM(IBHAND) END AS IBHAND from MMJDALIB.INVBAL GROUP BY INUMBR')";
+                string query = $@"select * from Openquery([snr], 'SELECT INUMBR  from MMJDALIB.INVBAL Where ISTORE = ''{club}'' GROUP BY INUMBR ,ISTORE')";
+                //string query = "select * from Openquery([snr], 'SELECT MST.INUMBR, MAX(BAL.ISTORE) ISTORE, SUM(BAL.IBHAND) IBHAND from MMJDALIB.INVMST as MST " +
+                //    "INNER JOIN MMJDALIB.INVBAL as BAL on MST.INUMBR = BAL.INUMBR " +
+                //    "WHERE MST.ISTYPE = ''01'' AND MST.IDSCCD IN (''A'',''I'',''D'',''P'') AND MST.IATRB1 IN (''L'',''I'',''LI'') " +
+                //    "GROUP BY MST.INUMBR')";
+
+                using (SqlCommand cmd = new SqlCommand(query, db.Con))
+                {
+                    if (db.Con.State == ConnectionState.Closed)
+                    {
+                        db.Con.Open();
+                    }
+
+                    cmd.CommandTimeout = 18000;
+
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+
+                            var INUMBR2 = reader["INUMBR"].ToString();
+
+                            list.Add(INUMBR2);
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                DateTime endLogs = DateTime.Now;
+                Log.Add(new Logging
+                {
+                    StartLog = startLogs,
+                    EndLog = endLogs,
+                    Action = "Error",
+                    Message = "ListIventory : " + e.Message + " ",
+                    Record_Date = Convert.ToDateTime(startLogs.ToString("yyyy-MM-dd 00:00:00.000"))
+
+                });
+
+                _logs.InsertLogs(Log);
+            }
+
+            return list;
         }
     }
 }
