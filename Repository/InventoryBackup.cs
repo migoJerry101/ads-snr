@@ -1,6 +1,7 @@
 ﻿using ads.Data;
 using ads.Interface;
 using ads.Models.Data;
+using DocumentFormat.OpenXml.Vml;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
@@ -10,15 +11,13 @@ namespace ads.Repository
 {
     public class InventoryBackup : IInventoryBackup
     {
-        private readonly InventoryBackUpContex _inventoryBackUpContex;
         private readonly IItem _item;
         private readonly IOpenQuery _openQuery;
         private readonly ISales _sales;
         private readonly IInvetory _invetory;
 
-        public InventoryBackup(InventoryBackUpContex inventoryBackUpContex, IItem item, IOpenQuery openQuery, ISales sales, IInvetory invetory)
+        public InventoryBackup(IItem item, IOpenQuery openQuery, ISales sales, IInvetory invetory)
         {
-            _inventoryBackUpContex = inventoryBackUpContex;
             _item = item;
             _openQuery = openQuery;
             _sales = sales;
@@ -31,25 +30,25 @@ namespace ads.Repository
             var salesInGeneral = new List<GeneralModel>();
             var skuInClubs = new List<string>();
             var items = await _item.GetAllItemSku();
-            var date = DateTime.Now.AddDays(-3);
-            var dateYesterday = DateTime.Now.AddDays(-4);
+            var date = DateTime.Now.AddDays(-4);
+            var dateYesterday = DateTime.Now.AddDays(-5);
             var dateWithZeroTime = new DateTime(date.Year, date.Month, date.Day, 0, 0, 0, 0);
             var dateYWithZeroTime = new DateTime(dateYesterday.Year, dateYesterday.Month, dateYesterday.Day, 0, 0, 0, 0);
 
 
             var dict = items.ToDictionary(x => x);
-            //var sales = await _sales.GetSalesByDate(dateWithZeroTime);
-            //var salesDict = sales.ToDictionary(x => $"{x.Sku}{x.Clubs}", y => y.Sales);
-            //var salesInGeneralModel = sales.Select(x => new GeneralModel()
-            //{
-            //    CSSKU = x.Sku,
-            //    CSDATE = $"'{dateWithZeroTime.ToString("yyMMdd")}'"
-            //});
+            var sales = await _sales.GetSalesByDate(dateWithZeroTime);
+            var salesDict = sales.ToDictionary(x => $"{x.Sku}{x.Clubs}", y => y.Sales);
+            var salesInGeneralModel = sales.Select(x => new GeneralModel()
+            {
+                CSSKU = x.Sku,
+                CSDATE = $"'{dateWithZeroTime.ToString("yyMMdd")}'"
+            });
 
             using (OledbCon db = new OledbCon())
             {
                 await db.Con.OpenAsync();
-                salesInGeneral = await _openQuery.ListOfSales(db, $"{dateWithZeroTime.ToString("yyMMdd")}", $"{dateWithZeroTime.ToString("yyMMdd")}");
+                salesInGeneral = await _openQuery.ListOfSales(db, $"{dateYWithZeroTime.ToString("yyMMdd")}", $"{dateYWithZeroTime.ToString("yyMMdd")}");
             }
 
             var inventoryToday = await _invetory.GetInventoriesByDate(dateYWithZeroTime);
@@ -84,10 +83,10 @@ namespace ads.Repository
                                 var sku = reader["INUMBR"].ToString();
                                 var onHand = Convert.ToDecimal(reader["ONHAND"].ToString());
                                 var hasValue = testInv.TryGetValue($"{sku}{club}", out var inventoryOut);
-                                //var hasSales = salesDict.TryGetValue($"{sku}{club}", out var salesout);
+                                var hasSales = salesDict.TryGetValue($"{sku}{club}", out var salesout);
                                 var hasTest = skuPerClubDictionary.TryGetValue(sku, out var skuOut);
 
-                                if ( hasValue)
+                                if (hasValue)
                                 {
                                     var inventory = new GeneralModel()
                                     {
@@ -118,14 +117,82 @@ namespace ads.Repository
                 }
             }
 
+            var invDic = listTtotal.GroupBy(x => new { x.ISTORE, x.INUMBR2 }).ToDictionary(
+                x => x.Key,
+                y => new GeneralModel()
+                {
+                    IBHAND = y.Sum(item => item.IBHAND),
+                    ISTORE = y.SingleOrDefault().ISTORE,
+                    INUMBR2 = y.SingleOrDefault().INUMBR2,
+                });
+
+            foreach (var skuString in items)
+            {
+
+
+                foreach (var clubx in listClubs)
+                {
+                    var tyest = new GeneralModel()
+                    {
+                        ISTORE = clubx,
+                        INUMBR2 = skuString,
+                    };
+
+                    if (!invDic.TryGetValue(new { tyest.ISTORE, tyest.INUMBR2 }, out var test1))
+                    {
+                        var inventory = new GeneralModel()
+                        {
+                            IBHAND = 0,
+                            ISTORE = clubx,
+                            INUMBR2 = skuString,
+                        };
+
+                        listTtotal.Add(inventory);
+                    }
+                }
+            }
+
+            var finalListOfInv = new List<Inventory>();
+
+            foreach(var total in listTtotal)
+            {
+                if (testInv.TryGetValue($"{total.INUMBR2}{total.ISTORE}", out var inv))
+                {
+                    var inventoryTest = new Inventory()
+                    {
+                        Clubs = total.ISTORE,
+                        Sku = total.INUMBR2,
+                        Inv = total.IBHAND,
+                        Date = dateWithZeroTime
+                    };
+                    finalListOfInv.Add(inventoryTest);
+                }
+                else
+                {
+                    var hasSales = salesDict.TryGetValue($"{total.INUMBR2}{total.ISTORE}", out var salesout);
+
+                    if (hasSales)
+                    {
+                        var inventoryTest = new Inventory()
+                        {
+                            Clubs = total.ISTORE,
+                            Sku = total.INUMBR2,
+                            Inv = 0,
+                            Date = dateWithZeroTime
+                        };
+                        finalListOfInv.Add(inventoryTest);
+                    }
+                }
+            }
+
+
 
             var skuInGeneral = items.Select(x => new GeneralModel()
             {
                 INUMBR = x,
             });
-            await _invetory.GetInventoryAsync(date.ToString("yyMMdd"), date.ToString("yyMMdd"), skuInGeneral.ToList(), salesInGeneral, listTtotal);
 
-
+            //await _invetory.GetInventoryAsync(date.ToString("yyMMdd"), date.ToString("yyMMdd"), skuInGeneral.ToList(), salesInGeneral, listTtotal);
 
             using (OledbCon db = new OledbCon())
             {

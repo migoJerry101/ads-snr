@@ -56,7 +56,7 @@ namespace ads.Repository
             DateTime currentDate = DateTime.Now;
 
             // Subtract one day
-            DateTime previousDate = currentDate.AddDays(-3);
+            DateTime previousDate = currentDate.AddDays(-1);
 
             ////////Actual Record or Final Setup
             string startDate = previousDate.ToString("yyMMdd");
@@ -80,7 +80,7 @@ namespace ads.Repository
 
                 }
 
-                //await _ads.ComputeAds();
+                await _ads.ComputeAds();
 
             }
             catch (Exception e)
