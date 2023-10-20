@@ -1,8 +1,13 @@
 ﻿using ads.Interface;
+using ads.Models.Dto;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ads.Controllers
 {
+    [Route("api/[controller]")]
+    [ApiController]
+    [EnableCors("AllowOrigin")]
     public class TotalAdsChainController : ControllerBase
     {
         private readonly ITotalAdsChain _totalAdsChain;
@@ -12,13 +17,19 @@ namespace ads.Controllers
             _totalAdsChain = totalAdsChain;
         }
 
-        [HttpGet]
+        [HttpPost]
         [Route("GetTotalAdsChain")]
-        public IActionResult GetTotalAdsChain()
+        public async Task<IActionResult> GetTotalAdsChain(TotalAdsChainPaginationDto data)
         {
-            var chain = _totalAdsChain.GetTotalAdsChain();
+            var chain = await _totalAdsChain.GetTotalAdsChain(data);
 
-            return Ok(chain);
+            var dto = new
+            {
+                Data = chain.Item1,
+                PageCount = chain.totalPages,
+            };
+
+            return Ok(dto);
         }
     }
 }

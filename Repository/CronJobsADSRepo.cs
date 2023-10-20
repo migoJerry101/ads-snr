@@ -80,6 +80,7 @@ namespace ads.Repository
 
                 }
 
+
                 await _ads.ComputeAds();
 
             }

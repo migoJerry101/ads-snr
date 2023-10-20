@@ -21,7 +21,7 @@ namespace ads.Repository
                     (string.IsNullOrEmpty(data.Club) || x.Clubs == data.Club) &&
                     (string.IsNullOrEmpty(data.Sku) || x.Sku == data.Sku) &&
                     x.StartDate == data.StartDate);
-
+                
             var adsCount = await ads.CountAsync();
             var totalPages = (int)Math.Ceiling((double)adsCount / data.PageSize);
 
