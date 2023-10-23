@@ -3,6 +3,7 @@ using ads.Repository;
 using ads.Interface;
 using Microsoft.EntityFrameworkCore;
 using ads.Data;
+using System;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -71,9 +72,12 @@ builder.Services.AddCors(options =>
     });
 });
 
-builder.Services.AddDbContext<AdsContex>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DatabaseConnection")
-    ));
+builder.Services.AddDbContextPool<AdsContex>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DatabaseConnection"), sqlServerOptionsAction: sqlOptions =>
+    {
+        sqlOptions.CommandTimeout(90);
+    })
+);
 
 var app = builder.Build();
 
