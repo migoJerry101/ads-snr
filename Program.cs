@@ -75,7 +75,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddDbContextPool<AdsContex>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DatabaseConnection"), sqlServerOptionsAction: sqlOptions =>
     {
-        sqlOptions.CommandTimeout(90);
+        sqlOptions.CommandTimeout(999);
     })
 );
 
