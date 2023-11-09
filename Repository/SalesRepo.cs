@@ -2,7 +2,9 @@
 using ads.Interface;
 using ads.Models.Data;
 using ads.Utility;
+using DocumentFormat.OpenXml.InkML;
 using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
@@ -15,14 +17,18 @@ namespace ads.Repository
     {
         private readonly IOpenQuery _openQuery;
         private readonly ILogs _logs;
+        private readonly AdsContex _adsContex;
+        private readonly IItem _item;
 
         //private readonly DateConvertion dateConvertion = new DateConvertion();
         private List<Sale> _saleList = new List<Sale>();
 
-        public SalesRepo(IOpenQuery openQuery, ILogs logs)
+        public SalesRepo(IOpenQuery openQuery, ILogs logs, AdsContex adsContex, IItem item)
         {
             _openQuery = openQuery;
             _logs = logs;
+            _adsContex = adsContex;
+            _item = item;
         }
 
         private List<Sale> GenerateListOfDataRows(List<GeneralModel> datas, string sku, bool hasSales, bool useStartDate, string? date)
@@ -46,7 +52,7 @@ namespace ads.Repository
         }
 
         //Get Sales
-        public async Task<List<Sale>> GetSalesAsync(string start, string end, List<GeneralModel> skus, List<GeneralModel> listOfSales, List<GeneralModel> inventories)
+        public async Task<List<Sale>> GetSalesAsync(string start, string end, List<string> skus, List<GeneralModel> listOfSales, List<GeneralModel> inventories)
         {
             List<Sale> transformedData = new List<Sale>();
 
@@ -59,6 +65,11 @@ namespace ads.Repository
             List<Logging> Log = new List<Logging>();
 
             DateTime startLogs = DateTime.Now;
+
+            var items = await _item.GetAllSkuWithDate();
+            var dateFormat = DateConvertion.ConvertStringDate(start);
+            var itemsDictionaryCount = items.Where(x => x.CreatedDate <= dateFormat).Count();
+            var itemsDictionary = items.Where(x => x.CreatedDate <= dateFormat).ToDictionary(y => y.Sku, y => y);
 
             try
             {
@@ -75,16 +86,16 @@ namespace ads.Repository
 
                     foreach (var sku in skus)
                     {
-                        if (salesLookup.TryGetValue(sku.INUMBR, out var salesOut))
+                        if (salesLookup.TryGetValue(sku, out var salesOut))
                         {
                             foreach (var data in salesOut)
                             {
                                 var Olde = new Sale
                                 {
-                                    Sku = sku.INUMBR,
+                                    Sku = sku,
                                     Clubs = data.CSSTOR,
                                     Sales = data.CSQTY,
-                                    Date = DateConvertion.ConvertStringDate( data.CSDATE),
+                                    Date = DateConvertion.ConvertStringDate(data.CSDATE),
                                 };
 
                                 listOfOledb.Add(Olde);
@@ -95,14 +106,14 @@ namespace ads.Repository
                         }
                         else
                         {
-                            if (inventoryLookup.TryGetValue(sku.INUMBR, out var inventoryOut))
+                            if (inventoryLookup.TryGetValue(sku, out var inventoryOut))
                             {
                                 //var generatedList = GenerateListOfDataRows(inventoryOut, sku.INUMBR, true, true, start);
                                 foreach (var data in inventoryOut)
                                 {
                                     var Olde = new Sale
                                     {
-                                        Sku = sku.INUMBR,
+                                        Sku = sku,
                                         Clubs = data.ISTORE,
                                         Sales = 0,
                                         Date = DateConvertion.ConvertStringDate(start),
@@ -119,7 +130,7 @@ namespace ads.Repository
                                 // this is filtered out when computing ADS of per store per sku
                                 var Olde = new Sale
                                 {
-                                    Sku = sku.INUMBR,
+                                    Sku = sku,
                                     Clubs = string.Empty,
                                     Sales = 0,
                                     Date = DateConvertion.ConvertStringDate(start),
@@ -207,8 +218,8 @@ namespace ads.Repository
             {
                 await Task.Run(() =>
                 {
-/*                    string query = "select * from tbl_data where Date in (" + dateListString + ") " +
-                        "ORDER BY Date OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY ";*/
+                    /*                    string query = "select * from tbl_data where Date in (" + dateListString + ") " +
+                                            "ORDER BY Date OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY ";*/
 
                     string strConn = "data source='199.84.0.201';Initial Catalog=ADS.UAT;User Id=sa;password=@dm1n@8800;Trusted_Connection=false;MultipleActiveResultSets=true;TrustServerCertificate=True;";
                     var con = new SqlConnection(strConn);
@@ -276,7 +287,7 @@ namespace ads.Repository
 
             // Get the total count of rows for your date filter
             var rowCount = await CountSales(dateListString, db);
-            var pageSize = (int)Math.Ceiling((double)rowCount /5);
+            var pageSize = (int)Math.Ceiling((double)rowCount / 5);
 
             // Calculate the total number of pages
             var totalPages = (int)Math.Ceiling((double)rowCount / pageSize);
@@ -382,6 +393,16 @@ namespace ads.Repository
              );
 
             return salesDictionary;
+        }
+
+        public async Task DeleteSalesByDateAsync(DateTime date)
+        {
+
+            var sales = _adsContex.Sales.Where(c => c.Date == date);
+            _adsContex.Sales.RemoveRange(sales);
+
+            await _adsContex.SaveChangesAsync();
+
         }
     }
 }

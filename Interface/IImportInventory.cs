@@ -4,6 +4,6 @@ namespace ads.Interface
 {
     public interface IImportInventory
     {
-        Task<List<Inventory>> GetInventory(string start, string end);
+        Task<List<Inv>> GetInventory(string start, string end);
     }
 }

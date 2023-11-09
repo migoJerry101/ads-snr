@@ -5,6 +5,7 @@ using Microsoft.Data.SqlClient;
 using System.Data;
 using ads.Utility;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.EntityFrameworkCore;
 
 namespace ads.Repository
 {
@@ -12,28 +13,39 @@ namespace ads.Repository
     {
         private readonly IOpenQuery _openQuery;
         private readonly ILogs _logs ;
+        private readonly AdsContex _adsContex;
+        private readonly IItem _item;
 
         //private readonly DateConvertion dateConvertion = new DateConvertion();
-        public List<Inventory> _inventoryList = new List<Inventory>();
+        public List<Inv> _inventoryList = new List<Inv>();
 
-        public InventoryRepo(IOpenQuery openQuery, ILogs logs)
-        { 
+        public InventoryRepo(IOpenQuery openQuery, ILogs logs, AdsContex adsContex, IItem item)
+        {
             _logs = logs;
             _openQuery = openQuery;
+            _adsContex = adsContex;
+            _item = item;
         }
 
         //Get Inventory
-        public async Task<List<Inventory>> GetInventoryAsync(string start, string end, List<GeneralModel> skus, List<GeneralModel> sales, List<GeneralModel> inventory)
+        public async Task<List<Inv>> GetInventoryAsync(string start, string end, List<GeneralModel> skus, List<GeneralModel> sales, List<GeneralModel> inventory)
         {
-            List<Inventory> ListCsDate = new List<Inventory>();
+            List<Inv> ListCsDate = new List<Inv>();
 
-            List<Inventory> ListBal = new List<Inventory>();
+            List<Inv> ListBal = new List<Inv>();
 
-            List<Inventory> ListInventory = new List<Inventory>();
+            List<Inv> ListInventory = new List<Inv>();
 
             List<Logging> Log = new List<Logging>();
 
             DateTime startLogs = DateTime.Now;
+
+            var items = await _item.GetAllSkuWithDate();
+            var dateFormat = DateConvertion.ConvertStringDate(start);
+            var itemsDictionaryCount = items.Where(x => x.CreatedDate <= dateFormat).Count();
+            var itemsDictionary = items.Where(x => x.CreatedDate <= dateFormat).ToDictionary(y => y.Sku, y => y);
+
+            skus = skus.Where(x => itemsDictionary.TryGetValue(x.CSSKU, out var greneralDto)).ToList();
 
             try
             {
@@ -61,21 +73,21 @@ namespace ads.Repository
                                 {
                                     var date = saleDate;
 
-                                    ListInventory.Add(new Inventory
+                                    ListInventory.Add(new Inv
                                     {
                                         Sku = sku.INUMBR,
                                         Clubs = inv.ISTORE,
-                                        Inv = inv.IBHAND,
+                                        Inventory = inv.IBHAND,
                                         Date = DateConvertion.ConvertStringDate(date),
                                     });
                                 }
                                 else
                                 {
-                                    ListInventory.Add(new Inventory
+                                    ListInventory.Add(new Inv
                                     {
                                         Sku = sku.INUMBR,
                                         Clubs = inv.ISTORE,
-                                        Inv = inv.IBHAND,
+                                        Inventory = inv.IBHAND,
                                         Date = DateConvertion.ConvertStringDate(start),
                                     });
                                 }
@@ -84,11 +96,11 @@ namespace ads.Repository
                         else
                         {
 
-                            ListInventory.Add(new Inventory
+                            ListInventory.Add(new Inv
                             {
                                 Sku = sku.INUMBR,
                                 Clubs = string.Empty,
-                                Inv = 0,
+                                Inventory = 0,
                                 Date = DateConvertion.ConvertStringDate(start),
                             });
                         }
@@ -116,7 +128,7 @@ namespace ads.Repository
                                 var row = dataTable.NewRow();
                                 row["Date"] = rawData.Date;
                                 row["Sku"] = rawData.Sku;
-                                row["Inventory"] = rawData.Inv;
+                                row["Inventory"] = rawData.Inventory;
                                 row["Clubs"] = rawData.Clubs;
                                 dataTable.Rows.Add(row);
 
@@ -183,7 +195,7 @@ namespace ads.Repository
                         command.Parameters.AddWithValue("@PageSize", pageSize);
                         command.Parameters.AddWithValue("@dateListString", dateListString);
                         command.CommandTimeout = 18000;
-                        var inventories = new List<Inventory>();
+                        var inventories = new List<Inv>();
                         con.Open();
 
                         // Open the connection and execute the command
@@ -195,11 +207,11 @@ namespace ads.Repository
 
                             var date = reader.GetDateTime("Date");
 
-                            Inventory Olde = new Inventory
+                            Inv Olde = new Inv
                             {
                                 Clubs = reader["Clubs"].ToString(),
                                 Sku = reader["Sku"].ToString(),
-                                Inv = Convert.ToDecimal(reader["Inventory"].ToString()),
+                                Inventory = Convert.ToDecimal(reader["Inventory"].ToString()),
                                 Date = date,
                             };
 
@@ -261,9 +273,9 @@ namespace ads.Repository
         }
 
         //list Inventory 
-        public async Task<List<Inventory>> ListInv(string dateListString, OledbCon db)
+        public async Task<List<Inv>> ListInv(string dateListString, OledbCon db)
         {
-            _inventoryList = new List<Inventory>();
+            _inventoryList = new List<Inv>();
             var tasks = new List<Task>();
 
             //var pageSize = 400000;
@@ -336,9 +348,9 @@ namespace ads.Repository
             return totalCount;
         }
 
-        public async Task<List<Inventory>> GetInventoriesByDate(DateTime date)
+        public async Task<List<Inv>> GetInventoriesByDate(DateTime date)
         {
-            _inventoryList = new List<Inventory>();
+            _inventoryList = new List<Inv>();
             var tasks = new List<Task>();
             var dateWithZeroTime = new DateTime(date.Year, date.Month, date.Day, 0, 0, 0, 0);
             var dateInString = $"'{dateWithZeroTime.ToString("yyyy-MM-dd HH:mm:ss.fff")}'";
@@ -366,24 +378,31 @@ namespace ads.Repository
             return _inventoryList;
         }
 
-        public Dictionary<string, decimal> GetDictionayOfTotalInventory(List<Inventory> inventories)
+        public Dictionary<string, decimal> GetDictionayOfTotalInventory(List<Inv> inventories)
         {
             var inventoryDictionary = inventories.GroupBy(x => x.Sku).ToDictionary(
                 group => group.Key,
-                group => group.Sum(item => item.Inv)
+                group => group.Sum(item => item.Inventory)
             );
 
             return inventoryDictionary;
         }
 
-        public Dictionary<string, decimal> GetDictionayOfPerClubhlInventory(List<Inventory> inventories)
+        public Dictionary<string, decimal> GetDictionayOfPerClubhlInventory(List<Inv> inventories)
         {
             var inventoryDictionary = inventories.GroupBy(x => $"{x.Sku}{x.Clubs}").ToDictionary(
                 group => group.Key,
-                group => group.Sum(item => item.Inv)
+                group => group.Sum(item => item.Inventory)
             );
 
             return inventoryDictionary;
+        }
+
+        public async Task<List<Inv>> GetEFInventoriesByDate(DateTime date)
+        {
+            var inventories = await _adsContex.Inventories.Where(x => x.Date == date).ToListAsync();
+
+            return inventories;
         }
     }
 }

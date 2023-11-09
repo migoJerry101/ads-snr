@@ -1,6 +1,7 @@
 ﻿using ads.Data;
 using ads.Interface;
 using ads.Models.Data;
+using ads.Utility;
 using DocumentFormat.OpenXml.Bibliography;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
@@ -34,16 +35,9 @@ namespace ads.Controllers
         }
 
         [HttpPost]
-        [Route("ImportInventoryAndSales")]
-        public async Task<IActionResult> Import(List<string> dates)
+        [Route("ComputeAds")]
+        public async Task<IActionResult> ComputeAds(List<string> dates)
         {
-            //foreach (var item in dates)
-            //{
-            //    await _invetory.GetInventoryAsync(item, item);
-            //     await _sales.GetSalesAsync(item, item);
-
-            //}
-
             await _ads.ComputeAds();
 
             return Ok();
@@ -77,6 +71,57 @@ namespace ads.Controllers
                 return Ok(new { listOfSales });
             }
         }
+
+        [HttpPost]
+        [Route("GetSalesOpenQuery")]
+        public async Task<IActionResult> GetSalesOpenQuery(string dates)
+        {
+            using (OledbCon db = new OledbCon())
+            {
+                await db.OpenAsync();
+
+                var listOfSales = await _openQuery.ListOfSales(db, dates, dates);
+
+                return Ok(new { listOfSales });
+            }
+        }
+
+        [HttpPost]
+        [Route("ReImportSales")]
+        public async Task<IActionResult> ReImportSales(List<string> dates)
+        {
+            var items = await _item.GetAllSkuWithDate();
+
+            using (OledbCon db = new OledbCon())
+            {
+                await db.OpenAsync();
+
+                foreach (var date in dates)
+                {
+                    var dateFormat = DateConvertion.ConvertStringDate(date);
+                    var itemsSku = items.Where(x => x.CreatedDate <= dateFormat).Select(x => x.Sku).ToList();
+                    var itemsDictionary = items.Where(x => x.CreatedDate <= dateFormat).ToDictionary(y => y.Sku, y => y);
+
+                    await _sales.DeleteSalesByDateAsync(dateFormat);
+                    var listOfSales = await _openQuery.ListOfSales(db, date, date);
+
+                    var inventories = await _invetory.GetEFInventoriesByDate(dateFormat);
+                    var invetiriesInDate = inventories
+                        .Where(x => itemsDictionary.TryGetValue(x.Sku, out var greneralDto))
+                        .Select(y => new GeneralModel()
+                        {
+                            INUMBR2 = y.Sku,
+                            ISTORE = y.Clubs,
+                            IBHAND = y.Inventory
+                        }).ToList();
+
+                    await _sales.GetSalesAsync(date, date, itemsSku, listOfSales, invetiriesInDate);
+                }
+            }
+
+            return Ok();
+        }
+
 
         [HttpPost]
         [Route("Computation")]
@@ -154,7 +199,7 @@ namespace ads.Controllers
                     // Now, excelData contains the content of the Excel file.
                     // You can process the data or return it as needed. 
 
-                    var inventories = new List<Inventory>();
+                    var inventories = new List<Inv>();
                     var skuInClubs = new List<string>();
                     var skuInClubsDic = new Dictionary<string, Dictionary<string, string>>();
 
@@ -183,24 +228,24 @@ namespace ads.Controllers
                             {
                                 var invInDecimal = Convert.ToDecimal(invOut);
 
-                                var inventory = new Inventory()
+                                var inventory = new Inv()
                                 {
                                     Sku = skuOut,
                                     Date = DateTime.Now.AddDays(-4),
                                     Clubs = club,
-                                    Inv = invInDecimal > 0 ? invInDecimal : 0,
+                                    Inventory = invInDecimal > 0 ? invInDecimal : 0,
                                 };
 
                                 inventories.Add(inventory);
                             }
                             else
                             {
-                                var inventory = new Inventory()
+                                var inventory = new Inv()
                                 {
                                     Sku = skuOut,
                                     Date = DateTime.Now.AddDays(-4),
                                     Clubs = club,
-                                    Inv = 0,
+                                    Inventory = 0,
                                 };
 
                                 inventories.Add(inventory);
@@ -262,7 +307,7 @@ namespace ads.Controllers
 
             try
             {
-                var invList = new List<Inventory>();
+                var invList = new List<Inv>();
                 var items = await _item.GetAllItemSku();
 
                 using (StreamReader reader = new StreamReader(filePath))
@@ -293,12 +338,12 @@ namespace ads.Controllers
 
                         if (count != 0 && listClubs.Contains(club) && isInClub )
                         {
-                            var invModel = new Inventory()
+                            var invModel = new Inv()
                             {
                                 Date = dateZeroTime,
                                 Sku = sku,
                                 Clubs = club,
-                                Inv = Convert.ToDecimal(inv),
+                                Inventory = Convert.ToDecimal(inv),
                             };
 
                             invList.Add(invModel);
@@ -311,9 +356,9 @@ namespace ads.Controllers
 
                 var invDic = invList.GroupBy(x => new { x.Sku, x.Clubs }).ToDictionary(
                     x => x.Key,
-                    y => new Inventory()
+                    y => new Inv()
                     {
-                        Inv = y.Sum(item => item.Inv),
+                        Inventory = y.Sum(item => item.Inventory),
                         Clubs = y.First().Clubs,
                         Sku = y.First().Sku,
                         Date = y.First().Date,
