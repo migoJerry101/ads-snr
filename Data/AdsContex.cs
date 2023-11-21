@@ -18,7 +18,7 @@ namespace ads.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<Sale>().ToTable("tbl_data");
+            modelBuilder.Entity<Sale>().ToTable("tbl_sales_data");
             modelBuilder.Entity<Inv>().ToTable("tbl_inv");
             modelBuilder.Entity<TotalAdsChain>().ToTable("tbl_totalAds");
             modelBuilder.Entity<TotalAdsClub>().ToTable("tbl_totaladsperclubs");

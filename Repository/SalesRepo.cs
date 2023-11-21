@@ -1,6 +1,7 @@
 ﻿using ads.Data;
 using ads.Interface;
 using ads.Models.Data;
+using ads.Models.Dto.ItemsDto;
 using ads.Utility;
 using DocumentFormat.OpenXml.InkML;
 using Microsoft.Data.SqlClient;
@@ -52,24 +53,12 @@ namespace ads.Repository
         }
 
         //Get Sales
-        public async Task<List<Sale>> GetSalesAsync(string start, string end, List<string> skus, List<GeneralModel> listOfSales, List<GeneralModel> inventories)
+        public async Task<List<Sale>> GetSalesAsync(string start, string end, IEnumerable<ItemSkuDateDto> skus, List<GeneralModel> listOfSales, List<GeneralModel> inventories)
         {
-            List<Sale> transformedData = new List<Sale>();
-
             List<Sale> listOfOledb = new List<Sale>();
-
-            List<Sale> listOfTBLSTR = new List<Sale>();
-
-            List<Sale> listOfINVMST = new List<Sale>();
-
             List<Logging> Log = new List<Logging>();
 
             DateTime startLogs = DateTime.Now;
-
-            var items = await _item.GetAllSkuWithDate();
-            var dateFormat = DateConvertion.ConvertStringDate(start);
-            var itemsDictionaryCount = items.Where(x => x.CreatedDate <= dateFormat).Count();
-            var itemsDictionary = items.Where(x => x.CreatedDate <= dateFormat).ToDictionary(y => y.Sku, y => y);
 
             try
             {
@@ -84,15 +73,15 @@ namespace ads.Repository
                     var inventoryLookup = inventories.GroupBy(x => x.INUMBR2).ToDictionary(group => group.Key, group => group.ToList());
                     var salesLookup = listOfSales.GroupBy(x => x.CSSKU).ToDictionary(group => group.Key, group => group.ToList());
 
-                    foreach (var sku in skus)
+                    foreach (var item in skus)
                     {
-                        if (salesLookup.TryGetValue(sku, out var salesOut))
+                        if (salesLookup.TryGetValue(item.Sku, out var salesOut))
                         {
                             foreach (var data in salesOut)
                             {
                                 var Olde = new Sale
                                 {
-                                    Sku = sku,
+                                    Sku = item.Sku,
                                     Clubs = data.CSSTOR,
                                     Sales = data.CSQTY,
                                     Date = DateConvertion.ConvertStringDate(data.CSDATE),
@@ -106,14 +95,14 @@ namespace ads.Repository
                         }
                         else
                         {
-                            if (inventoryLookup.TryGetValue(sku, out var inventoryOut))
+                            if (inventoryLookup.TryGetValue(item.Sku, out var inventoryOut))
                             {
                                 //var generatedList = GenerateListOfDataRows(inventoryOut, sku.INUMBR, true, true, start);
                                 foreach (var data in inventoryOut)
                                 {
                                     var Olde = new Sale
                                     {
-                                        Sku = sku,
+                                        Sku = item.Sku,
                                         Clubs = data.ISTORE,
                                         Sales = 0,
                                         Date = DateConvertion.ConvertStringDate(start),
@@ -130,7 +119,7 @@ namespace ads.Repository
                                 // this is filtered out when computing ADS of per store per sku
                                 var Olde = new Sale
                                 {
-                                    Sku = sku,
+                                    Sku = item.Sku,
                                     Clubs = string.Empty,
                                     Sales = 0,
                                     Date = DateConvertion.ConvertStringDate(start),
@@ -146,7 +135,7 @@ namespace ads.Repository
                     {
                         using (var bulkCopy = new SqlBulkCopy(db.Con, SqlBulkCopyOptions.Default, transaction))
                         {
-                            bulkCopy.DestinationTableName = "tbl_data";
+                            bulkCopy.DestinationTableName = "tbl_sales_data";
                             bulkCopy.BatchSize = 1000;
 
                             var dataTable = new DataTable();
@@ -353,6 +342,13 @@ namespace ads.Repository
             return totalCount;
         }
 
+        public async Task<List<Sale>> GetSalesByDateEf(DateTime date)
+        {
+            var sales = await _adsContex.Sales.Where(x => x.Date == date).ToListAsync();
+
+            return sales;
+        }
+
         public async Task<List<Sale>> GetSalesByDate(DateTime date)
         {
             List<Sale> list = new List<Sale>();
@@ -397,12 +393,67 @@ namespace ads.Repository
 
         public async Task DeleteSalesByDateAsync(DateTime date)
         {
+            var startLog = DateTime.Now;
+            var logs = new List<Logging>();
 
-            var sales = _adsContex.Sales.Where(c => c.Date == date);
-            _adsContex.Sales.RemoveRange(sales);
+            try
+            {
+                var sales = _adsContex.Sales.Where(c => c.Date == date);
+                _adsContex.Sales.RemoveRange(sales);
 
-            await _adsContex.SaveChangesAsync();
+                await _adsContex.SaveChangesAsync();
 
+                DateTime endLogs = DateTime.Now;
+                logs.Add(new Logging
+                {
+                    StartLog = startLog,
+                    EndLog = endLogs,
+                    Action = "DeleteSalesByDateAsync",
+                    Message = "Total Sales Deleted : " + sales.Count() + "",
+                    Record_Date = DateTime.Now
+                });
+
+                _logs.InsertLogs(logs);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Error: " + e.Message);
+
+                DateTime endLogs = DateTime.Now;
+                logs.Add(new Logging
+                {
+                    StartLog = startLog,
+                    EndLog = endLogs,
+                    Action = "Error",
+                    Message = "DeleteSalesByDateAsync : " + e.Message + " ",
+                    Record_Date = endLogs
+                });
+
+                _logs.InsertLogs(logs);
+            }
+        }
+
+        public List<Sale> GetAdjustedSalesValue(List<Sale> sales, IEnumerable<Sale> reImportedSales)
+        {
+            var salesWithDiff = new List<Sale>();
+            var currentSalesDitionary = sales.ToDictionary(x => new { x.Sku, x.Clubs, x.Date });
+
+            foreach (var sale in reImportedSales)
+            {
+                var hasSales = currentSalesDitionary.TryGetValue(new { sale.Sku, sale.Clubs, sale.Date }, out var saleOut);
+
+                if (hasSales && (Math.Round(sale.Sales) != saleOut.Sales))
+                {
+                    //sales - reimported data
+                    //salesOut - current data
+                    var diffrenceInSales = saleOut.Sales - sale.Sales;
+                    saleOut.Sales = diffrenceInSales;
+
+                    salesWithDiff.Add(saleOut);
+                }
+            }
+
+            return salesWithDiff;
         }
     }
 }

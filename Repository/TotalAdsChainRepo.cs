@@ -26,5 +26,14 @@ namespace ads.Repository
 
             return ads;
         }
+
+        public async Task DeleteAdsChainAsync(string date)
+        {
+            var ads = _context.TotalAdsChains;
+            var itemsToRemove = ads.Where(x => x.StartDate == date);
+            ads.RemoveRange(itemsToRemove);
+
+            await _context.SaveChangesAsync();
+        }
     }
 }

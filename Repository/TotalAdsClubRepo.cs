@@ -39,5 +39,14 @@ namespace ads.Repository
 
             return ads;
         }
+
+        public async Task DeleteAdsClubsAsync(string date)
+        {
+            var ads = _context.TotalAdsClubs;
+            var itemsToRemove = ads.Where(x => x.StartDate == date);
+            ads.RemoveRange(itemsToRemove);
+
+            await _context.SaveChangesAsync();
+        }
     }
 }

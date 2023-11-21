@@ -6,10 +6,11 @@ using System.Data;
 using ads.Utility;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.EntityFrameworkCore;
+using ads.Models.Dto.ItemsDto;
 
 namespace ads.Repository
 {
-    public class InventoryRepo : IInvetory
+    public class InventoryRepo : IInventory
     {
         private readonly IOpenQuery _openQuery;
         private readonly ILogs _logs ;
@@ -28,7 +29,7 @@ namespace ads.Repository
         }
 
         //Get Inventory
-        public async Task<List<Inv>> GetInventoryAsync(string start, string end, List<GeneralModel> skus, List<GeneralModel> sales, List<GeneralModel> inventory)
+        public async Task<List<Inv>> GetInventoryAsync(string start, string end, IEnumerable<ItemSkuDateDto> skus, List<GeneralModel> sales, List<GeneralModel> inventory)
         {
             List<Inv> ListCsDate = new List<Inv>();
 
@@ -40,12 +41,7 @@ namespace ads.Repository
 
             DateTime startLogs = DateTime.Now;
 
-            var items = await _item.GetAllSkuWithDate();
-            var dateFormat = DateConvertion.ConvertStringDate(start);
-            var itemsDictionaryCount = items.Where(x => x.CreatedDate <= dateFormat).Count();
-            var itemsDictionary = items.Where(x => x.CreatedDate <= dateFormat).ToDictionary(y => y.Sku, y => y);
-
-            skus = skus.Where(x => itemsDictionary.TryGetValue(x.CSSKU, out var greneralDto)).ToList();
+            //skus = skus.Where(x => itemsDictionary.TryGetValue(x, out var greneralDto)).ToList();
 
             try
             {
@@ -56,26 +52,24 @@ namespace ads.Repository
                     {
                         db.Con.Open();
                     }
-
-                    var skuDictionary = skus.ToDictionary(x => x.INUMBR);
                     
                     var inventoryDictionary = inventory.GroupBy(y=> y.INUMBR2).ToDictionary(x => x.Key, x=> x.ToList());
                     var SalesDictonary = sales.ToDictionary(y => $"{y.CSSKU + y.CSSTOR}", x => x.CSDATE);
 
 
-                    foreach (var sku in skus)
+                    foreach (var item in skus)
                     {
-                        if (inventoryDictionary.TryGetValue(sku.INUMBR, out var inventoryOut))
+                        if (inventoryDictionary.TryGetValue(item.Sku, out var inventoryOut))
                         {
                             foreach (var inv in inventoryOut)
                             {
-                                if (SalesDictonary.TryGetValue($"{sku.INUMBR + inv.ISTORE}", out var saleDate))
+                                if (SalesDictonary.TryGetValue($"{item + inv.ISTORE}", out var saleDate))
                                 {
                                     var date = saleDate;
 
                                     ListInventory.Add(new Inv
                                     {
-                                        Sku = sku.INUMBR,
+                                        Sku = item.Sku,
                                         Clubs = inv.ISTORE,
                                         Inventory = inv.IBHAND,
                                         Date = DateConvertion.ConvertStringDate(date),
@@ -85,7 +79,7 @@ namespace ads.Repository
                                 {
                                     ListInventory.Add(new Inv
                                     {
-                                        Sku = sku.INUMBR,
+                                        Sku = item.Sku,
                                         Clubs = inv.ISTORE,
                                         Inventory = inv.IBHAND,
                                         Date = DateConvertion.ConvertStringDate(start),
@@ -98,7 +92,7 @@ namespace ads.Repository
 
                             ListInventory.Add(new Inv
                             {
-                                Sku = sku.INUMBR,
+                                Sku = item.Sku,
                                 Clubs = string.Empty,
                                 Inventory = 0,
                                 Date = DateConvertion.ConvertStringDate(start),
@@ -348,6 +342,13 @@ namespace ads.Repository
             return totalCount;
         }
 
+        public async Task<List<Inv>> GetInventoriesByDateEF(DateTime date)
+        {
+            var inventories = await _adsContex.Inventories.Where(x => x.Date == date).ToListAsync();
+
+            return inventories;
+        }
+
         public async Task<List<Inv>> GetInventoriesByDate(DateTime date)
         {
             _inventoryList = new List<Inv>();
@@ -403,6 +404,44 @@ namespace ads.Repository
             var inventories = await _adsContex.Inventories.Where(x => x.Date == date).ToListAsync();
 
             return inventories;
+        }
+
+        public async Task BatchUpdateInventoryBysales(List<Sale> updatedSales)
+        {
+            var startLog = DateTime.Now;
+
+            try
+            {
+                foreach (var sales in updatedSales)
+                {
+                    var invToUpdate = await _adsContex.Inventories.SingleOrDefaultAsync(x => x.Date == sales.Date && x.Sku == sales.Sku && x.Clubs == sales.Clubs);
+
+                    if (invToUpdate != null)
+                    {
+                        invToUpdate.Inventory += sales.Sales;
+                    }
+                }
+
+                await _adsContex.SaveChangesAsync();
+            }
+            catch (Exception e)
+            {
+                var logs = new List<Logging>();
+                Console.WriteLine("Error: " + e.Message);
+
+                DateTime endLogs = DateTime.Now;
+                logs.Add(new Logging
+                {
+                    StartLog = startLog,
+                    EndLog = endLogs,
+                    Action = "Error",
+                    Message = "BatchUpdateInventoryBysales : " + e.Message + " ",
+                    Record_Date = endLogs
+                });
+
+                _logs.InsertLogs(logs);
+            }
+
         }
     }
 }

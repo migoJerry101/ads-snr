@@ -85,15 +85,7 @@ namespace ads.Repository
 
             try
             {
-                // string query = "select * from Openquery([snr], 'SELECT CSSKU, CSDATE, CSSTOR, CASE WHEN SUM(CSQTY) < 0 THEN 0 ELSE SUM(CSQTY) END AS CSQTY from MMJDALIB.CSHDET where CSDATE BETWEEN ''" + start + "'' AND ''" + end + "'' GROUP BY CSSKU, CSSTOR ,CSDATE ')";
-                string query = $@"select * from Openquery([snr], 
-                                    'SELECT A.* FROM 
-                                        (SELECT CSSKU, CSDATE, CSSTOR, SUM(CSQTY) AS CSQTY 
-                                        from MMJDALIB.CSHDET WHERE CSDATE BETWEEN {start}  AND {end} AND CSQTY > 0 GROUP BY CSSKU, CSSTOR ,CSDATE 
-                                        UNION ALL 
-                                        SELECT CSSKU, CSDATE, CSSTOR,  SUM(CSQTY)  AS CSQTY 
-                                        from MMJDALIB.CSHDET WHERE CSDATE BETWEEN {start}  AND {end} AND CSQTY < 0 GROUP BY CSSKU, CSSTOR ,CSDATE)
-                                    A ORDER BY A.CSSKU')";
+                string query = "select * from Openquery([snr], 'SELECT CSSKU, CSDATE, CSSTOR, SUM(CSQTY) AS CSQTY from MMJDALIB.CSHDET where CSDATE BETWEEN ''" + start + "'' AND ''" + end + "'' GROUP BY CSSKU, CSSTOR ,CSDATE ')";
 
                 using (SqlCommand cmd = new SqlCommand(query, db.Con))
                 {
@@ -137,12 +129,7 @@ namespace ads.Repository
                 _logs.InsertLogs(Log);
             }
 
-            var positiveSales = list.Where(x => x.CSQTY > 0);
-            var positiveSalesDictionary = positiveSales.ToDictionary(y => new { y.CSDATE, y.CSSTOR, y.CSSKU });
-            var negativeSales = list.Where(x => x.CSQTY < 0 && !positiveSalesDictionary.TryGetValue(new { x.CSDATE, x.CSSTOR, x.CSSKU }, out var sale));
-            var salesList = positiveSales.Concat(negativeSales).ToList();
-
-            return salesList;
+            return list;
         }
 
         //ListINVBAL - List of Inventory Groupby SKU

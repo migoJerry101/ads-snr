@@ -7,6 +7,6 @@ namespace ads.Interface
         Task<List<TotalAdsChain>> GetComputation(string startDate);
         Task<List<TotalAdsChain>> GetTotalApdAsync(List<Inv> listInventoryResult, List<Sale> listSalesResult, string dateListString);
         Task<List<TotalAdsClub>> GetTotalSkuAndClubsAsync(List<Inv> listInventoryResult, List<Sale> listSalesResult, string dateListString);
-        Task ComputeAds();
+        Task ComputeAds(DateTime date);
     }
 }

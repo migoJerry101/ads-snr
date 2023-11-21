@@ -14,9 +14,9 @@ namespace ads.Repository
         private readonly IItem _item;
         private readonly IOpenQuery _openQuery;
         private readonly ISales _sales;
-        private readonly IInvetory _invetory;
+        private readonly IInventory _invetory;
 
-        public InventoryBackup(IItem item, IOpenQuery openQuery, ISales sales, IInvetory invetory)
+        public InventoryBackup(IItem item, IOpenQuery openQuery, ISales sales, IInventory invetory)
         {
             _item = item;
             _openQuery = openQuery;

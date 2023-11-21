@@ -6,5 +6,6 @@ namespace ads.Interface
     {
         TotalAdsChain GetTotalAdsChain();
         Task<List<TotalAdsChain>> GetTotalAdsChainByDate(string date);
+        Task DeleteAdsChainAsync(string date);
     }
 }

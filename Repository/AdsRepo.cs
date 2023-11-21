@@ -23,7 +23,7 @@ namespace ads.Repository
         public List<TotalAdsClub> _totalAdsClubs = new List<TotalAdsClub>();
 
         private readonly ISales _sales;
-        private readonly IInvetory _invetory;
+        private readonly IInventory _invetory;
         private readonly IOpenQuery _openQuery;
         private readonly IClub _club;
         private readonly ITotalAdsClub _totalAdsClubRepo;
@@ -32,7 +32,7 @@ namespace ads.Repository
 
         public AdsRepo(
             ISales sales,
-            IInvetory invetory,
+            IInventory invetory,
             IOpenQuery openQuery,
             IClub club,
             ITotalAdsClub totalAdsClubRepo,
@@ -513,18 +513,19 @@ namespace ads.Repository
             }
         }
 
-        public async Task ComputeAds()
+        public async Task ComputeAds(DateTime date)
         {
             _totalAdsChain = new List<TotalAdsChain>();
             var Log = new List<Logging>();
             var listData = new List<Sale>();
             var tasks = new List<Task>();
             var tasksPerClubs = new List<Task>();
-            var skus = await _item.GetAllItemSku();
+            var skus = await _item.GetAllSkuWithDate();
+            var itemsToday = skus.Where(x => x.CreatedDate <= date);
 
             //get ads first
-            var currentDate = DateTime.Now.AddDays(-1);
-            var AdsDate = DateTime.Now.AddDays(-2);
+            var currentDate = date.AddDays(-1);
+            var AdsDate = date.AddDays(-2);
             var CurrentDateWithZeroTime = new DateTime(currentDate.Year, currentDate.Month, currentDate.Day, 0, 0, 0, 0);
             var adsStartDate = new DateTime(AdsDate.Year, AdsDate.Month, AdsDate.Day, 0, 0, 0, 0);
 
@@ -540,19 +541,19 @@ namespace ads.Repository
             var daysDifference = difference.Days;
 
             //sales for chain
-            var SalesToday = await _sales.GetSalesByDate(CurrentDateWithZeroTime); //to add
-            var salesDayZero = await _sales.GetSalesByDate(endDateOut); // to subtract
+            var SalesToday = await _sales.GetSalesByDateEf(CurrentDateWithZeroTime); //to add
+            var salesDayZero = await _sales.GetSalesByDateEf(endDateOut); // to subtract
 
             //sales for clubs
-            var salesTodayWithoutNullClubs = SalesToday.Where(i => !i.Clubs.IsNullOrEmpty()).ToList();
-            var salesDayZeroWithoutNullClubs = salesDayZero.Where(i => !i.Clubs.IsNullOrEmpty()).ToList();
+            var salesTodayWithoutNullClubs = SalesToday.Where(i => !i.Clubs.IsNullOrEmpty());
+            var salesDayZeroWithoutNullClubs = salesDayZero.Where(i => !i.Clubs.IsNullOrEmpty());
 
             //getInventory today and dayzero
-            var inventoryToday = await _invetory.GetInventoriesByDate(CurrentDateWithZeroTime);
-            var inventoryDayZero = await _invetory.GetInventoriesByDate(endDateOut);
+            var inventoryToday = await _invetory.GetInventoriesByDateEF(CurrentDateWithZeroTime);
+            var inventoryDayZero = await _invetory.GetInventoriesByDateEF(endDateOut);
 
-            var inventoryDayZeroWithoutNullClubs = inventoryDayZero.Where(i => !i.Clubs.IsNullOrEmpty()).ToList();
-            var inventoryTodayWithoutNullClubs = inventoryToday.Where(c => !c.Clubs.IsNullOrEmpty()).ToList();
+            var inventoryDayZeroWithoutNullClubs = inventoryDayZero.Where(i => !i.Clubs.IsNullOrEmpty());
+            var inventoryTodayWithoutNullClubs = inventoryToday.Where(c => !c.Clubs.IsNullOrEmpty());
 
             //get ads per store
             //var totalAdsDayYesterdayClubs = await GetCountAdsByDate($"'{adsStartDate:yyyy-MM-dd HH:mm:ss.fff}'");
@@ -572,12 +573,12 @@ namespace ads.Repository
             var startDateInString = $"{CurrentDateWithZeroTime:yyyy-MM-dd HH:mm:ss.fff}";
             var endDateInString = $"{endDateOut:yyyy-MM-dd HH:mm:ss.fff}";
 
-            foreach (var sku in skus)
+            foreach (var item in itemsToday)
             {
-                if (chainDictionary.TryGetValue(sku, out var ads))
+                if (chainDictionary.TryGetValue(item.Sku, out var ads))
                 {
-                    var hasSales = salesTotalDictionaryDayZero.TryGetValue(sku, out var totalSalesOut);
-                    var hasInventory = inventoryTodayDictionaryDayZero.TryGetValue(sku, out var totalInvOut);
+                    var hasSales = salesTotalDictionaryDayZero.TryGetValue(item.Sku, out var totalSalesOut);
+                    var hasInventory = inventoryTodayDictionaryDayZero.TryGetValue(item.Sku, out var totalInvOut);
 
                     var daysDifferenceOut = DateComputeUtility.GetDifferenceInRange(ads.StartDate, ads.EndDate);
 
@@ -609,12 +610,12 @@ namespace ads.Repository
 
             adsWithCurrentsales = new List<TotalAdsChain>();
 
-            foreach (var sku in skus)
+            foreach (var item in itemsToday)
             {
-                var hasSales = salesTotalDictionaryToday.TryGetValue(sku, out var totalSalesOut);
-                var hasInventory = inventoryTotalDictionaryToday.TryGetValue(sku, out var totalInvOut);
+                var hasSales = salesTotalDictionaryToday.TryGetValue(item.Sku, out var totalSalesOut);
+                var hasInventory = inventoryTotalDictionaryToday.TryGetValue(item.Sku, out var totalInvOut);
 
-                if (adsWithCurrentsalesDictionary.TryGetValue(sku, out var ads))
+                if (adsWithCurrentsalesDictionary.TryGetValue(item.Sku, out var ads))
                 {
                     if (totalSalesOut >= 0)
                     {
@@ -648,7 +649,7 @@ namespace ads.Repository
                             Divisor = 0,
                             Sales = saleCheckedVal,
                             Ads = Math.Round(totalSalesOut / 1, 2),
-                            Sku = sku,
+                            Sku = item.Sku,
                             StartDate = startDateInString,
                             EndDate = startDateInString
                         };

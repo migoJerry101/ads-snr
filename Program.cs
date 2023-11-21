@@ -8,7 +8,7 @@ using System;
 var builder = WebApplication.CreateBuilder(args);
 
 //Independe Injection
-builder.Services.AddScoped<IInvetory, InventoryRepo>();
+builder.Services.AddScoped<IInventory, InventoryRepo>();
 builder.Services.AddScoped<ISales, SalesRepo>();
 builder.Services.AddScoped<IAds, AdsRepo>();
 builder.Services.AddScoped<IOpenQuery, OpenQueryRepo>();
