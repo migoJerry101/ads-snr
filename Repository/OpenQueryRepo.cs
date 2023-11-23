@@ -22,15 +22,15 @@ namespace ads.Repository
         {
             _logs = logs;
         }
-        public async Task<List<GeneralModel>> ListOfAllSKu(OledbCon db)
+        public async Task<List<string>> ListOfAllSKu(OledbCon db)
         {
-            List<GeneralModel> list = new List<GeneralModel>();
+            var list = new List<string>();
 
             List<Logging> Log = new List<Logging>();
 
             DateTime startLogs = DateTime.Now;
 
-            try 
+            try
             {
                 string query = "select * from Openquery([snr], 'SELECT INUMBR from MMJDALIB.INVMST WHERE ISTYPE = ''01'' AND IDSCCD IN (''A'',''I'',''D'',''P'') AND IATRB1 IN (''L'',''I'',''LI'')')";
 
@@ -47,17 +47,15 @@ namespace ads.Repository
                     {
                         while (await reader.ReadAsync())
                         {
-                            GeneralModel Olde = new GeneralModel
-                            {
-                                INUMBR = reader["INUMBR"].ToString()
-                            };
 
-                            list.Add(Olde);
+                            var INUMBR = reader["INUMBR"].ToString();
+
+                            list.Add(INUMBR);
                         }
                     }
                 }
             }
-            catch (Exception e) 
+            catch (Exception e)
             {
                 DateTime endLogs = DateTime.Now;
                 Log.Add(new Logging
@@ -73,7 +71,7 @@ namespace ads.Repository
                 _logs.InsertLogs(Log);
             }
 
-            return list.ToList();
+            return list;
         }
 
         //ListCSHDET - List of Sales GroupBy SKu,,store,Date
@@ -87,8 +85,7 @@ namespace ads.Repository
 
             try
             {
-                //string query = "select * from Openquery([snr], 'SELECT CSSKU, CSDATE, MAX(CSSTOR) CSSTOR, SUM(CSQTY) CSQTY from MMJDALIB.CSHDET where CSDATE BETWEEN ''" + start + "'' AND ''" + end + "'' GROUP BY CSSKU ,CSDATE ')";
-                string query = "select * from Openquery([snr], 'SELECT CSSKU, CSDATE, CSSTOR, CASE WHEN SUM(CSQTY) < 0 THEN 0 ELSE SUM(CSQTY) END AS CSQTY from MMJDALIB.CSHDET where CSDATE BETWEEN ''" + start + "'' AND ''" + end + "'' GROUP BY CSSKU, CSSTOR ,CSDATE ')";
+                string query = "select * from Openquery([snr], 'SELECT CSSKU, CSDATE, CSSTOR, SUM(CSQTY) AS CSQTY from MMJDALIB.CSHDET where CSDATE BETWEEN ''" + start + "'' AND ''" + end + "'' GROUP BY CSSKU, CSSTOR ,CSDATE ')";
 
                 using (SqlCommand cmd = new SqlCommand(query, db.Con))
                 {
@@ -132,7 +129,7 @@ namespace ads.Repository
                 _logs.InsertLogs(Log);
             }
 
-            return list.ToList();
+            return list;
         }
 
         //ListINVBAL - List of Inventory Groupby SKU
@@ -235,7 +232,7 @@ namespace ads.Repository
                     }
                 }
             }
-            catch(Exception e) 
+            catch (Exception e)
             {
                 DateTime endLogs = DateTime.Now;
                 Log.Add(new Logging
@@ -286,8 +283,8 @@ namespace ads.Repository
                         while (await reader.ReadAsync())
                         {
                             var dateStart = reader["STSDAT"].ToString();
-                            
-                            if(dateStart.Length < 6)
+
+                            if (dateStart.Length < 6)
                             {
                                 dateStart = $"0{dateStart}";
                             }
@@ -375,7 +372,7 @@ namespace ads.Repository
                     await command.ExecuteNonQueryAsync();
                 }
 
-                string query = "select * from Openquery([snr], 'SELECT INUMBR,IDESCR from MMJDALIB.INVMST WHERE ISTYPE = ''01'' AND IDSCCD IN (''A'',''I'',''D'',''P'') AND IATRB1 IN (''L'',''I'',''LI'')')";
+                string query = "select * from Openquery([snr], 'SELECT INUMBR, IDESCR, IMCRDT from MMJDALIB.INVMST WHERE ISTYPE = ''01'' AND IDSCCD IN (''A'',''I'',''D'',''P'') AND IATRB1 IN (''L'',''I'',''LI'')')";
 
                 using (SqlCommand cmd = new SqlCommand(query, db.Con))
                 {
@@ -385,10 +382,18 @@ namespace ads.Repository
                     {
                         while (await reader.ReadAsync())
                         {
+                            var createdDate = reader["IMCRDT"].ToString();
+
+                            if (createdDate.Length < 6)
+                            {
+                                createdDate = $"0{createdDate}";
+                            }
+
                             var item = new Item
                             {
                                 Sku = reader["INUMBR"].ToString(),
-                                Name = reader["IDESCR"].ToString()
+                                Name = reader["IDESCR"].ToString(),
+                                CreatedDate = DateConvertion.ConvertStringDate(createdDate),
                             };
 
                             list.Add(item);
@@ -408,6 +413,7 @@ namespace ads.Repository
                                 dataTable.Columns.Add("Id", typeof(int));
                                 dataTable.Columns.Add("SKU", typeof(int));
                                 dataTable.Columns.Add("Name", typeof(string));
+                                dataTable.Columns.Add("CreatedDate", typeof(DateTime));
 
                                 foreach (var item in list)
                                 {
@@ -415,6 +421,7 @@ namespace ads.Repository
                                     row["Id"] = item.Id;
                                     row["Sku"] = item.Sku;
                                     row["Name"] = item.Name;
+                                    row["CreatedDate"] = item.CreatedDate;
 
                                     dataTable.Rows.Add(row);
                                 }

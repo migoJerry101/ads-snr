@@ -10,7 +10,7 @@ namespace ads.Data
         }
 
         public DbSet<Sale> Sales { get; set; }
-        public DbSet<Inventory> Inventories { get; set; }
+        public DbSet<Inv> Inventories { get; set; }
         public DbSet<TotalAdsChain> TotalAdsChains { get; set; }
         public DbSet<TotalAdsClub> TotalAdsClubs { get; set;}
         public DbSet<Club> Clubs { get; set; }
@@ -18,8 +18,8 @@ namespace ads.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<Sale>().ToTable("tbl_data");
-            modelBuilder.Entity<Inventory>().ToTable("tbl_inv");
+            modelBuilder.Entity<Sale>().ToTable("tbl_sales_data");
+            modelBuilder.Entity<Inv>().ToTable("tbl_inv");
             modelBuilder.Entity<TotalAdsChain>().ToTable("tbl_totalAds");
             modelBuilder.Entity<TotalAdsClub>().ToTable("tbl_totaladsperclubs");
             modelBuilder.Entity<Club>().ToTable("tbl_Clubs");

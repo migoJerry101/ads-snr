@@ -7,5 +7,6 @@ namespace ads.Interface
     {
         Task<(List<TotalAdsClub>, int totalPages)> GetPaginatedTotalAdsClubs(TotalAdsChainPaginationDto data);
         Task<List<TotalAdsClub>> GetTotalAdsClubsByDate(string date);
+        Task DeleteAdsClubsAsync(string date);
     }
 }

@@ -8,7 +8,7 @@ using System;
 var builder = WebApplication.CreateBuilder(args);
 
 //Independe Injection
-builder.Services.AddScoped<IInvetory, InventoryRepo>();
+builder.Services.AddScoped<IInventory, InventoryRepo>();
 builder.Services.AddScoped<ISales, SalesRepo>();
 builder.Services.AddScoped<IAds, AdsRepo>();
 builder.Services.AddScoped<IOpenQuery, OpenQueryRepo>();
@@ -34,9 +34,8 @@ builder.Services.AddQuartz(q =>
         .ForJob(jobKey)
         .WithIdentity("DataRepo-trigger")
         //.WithCronSchedule("50 38 16 * * ?"));`
-    ////Actual Record of Final Records
-    .WithCronSchedule("01 00 06 * * ?"));
-
+        ////Actual Record of Final Records
+        .WithCronSchedule("01 00 06 * * ?"));
 });
 
 

@@ -14,9 +14,9 @@ namespace ads.Repository
         private readonly IItem _item;
         private readonly IOpenQuery _openQuery;
         private readonly ISales _sales;
-        private readonly IInvetory _invetory;
+        private readonly IInventory _invetory;
 
-        public InventoryBackup(IItem item, IOpenQuery openQuery, ISales sales, IInvetory invetory)
+        public InventoryBackup(IItem item, IOpenQuery openQuery, ISales sales, IInventory invetory)
         {
             _item = item;
             _openQuery = openQuery;
@@ -152,17 +152,17 @@ namespace ads.Repository
                 }
             }
 
-            var finalListOfInv = new List<Inventory>();
+            var finalListOfInv = new List<Inv>();
 
             foreach(var total in listTtotal)
             {
                 if (testInv.TryGetValue($"{total.INUMBR2}{total.ISTORE}", out var inv))
                 {
-                    var inventoryTest = new Inventory()
+                    var inventoryTest = new Inv()
                     {
                         Clubs = total.ISTORE,
                         Sku = total.INUMBR2,
-                        Inv = total.IBHAND,
+                        Inventory = total.IBHAND,
                         Date = dateWithZeroTime
                     };
                     finalListOfInv.Add(inventoryTest);
@@ -173,11 +173,11 @@ namespace ads.Repository
 
                     if (hasSales)
                     {
-                        var inventoryTest = new Inventory()
+                        var inventoryTest = new Inv()
                         {
                             Clubs = total.ISTORE,
                             Sku = total.INUMBR2,
-                            Inv = 0,
+                            Inventory = 0,
                             Date = dateWithZeroTime
                         };
                         finalListOfInv.Add(inventoryTest);

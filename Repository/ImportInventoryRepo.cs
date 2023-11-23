@@ -16,10 +16,10 @@ namespace ads.Repository
             _logs = logs;
         }
 
-        public async Task<List<Inventory>> GetInventory(string start, string end)
+        public async Task<List<Inv>> GetInventory(string start, string end)
         {
 
-            List<Inventory> ListInventory = new List<Inventory>();
+            List<Inv> ListInventory = new List<Inv>();
             List<Logging> Log = new List<Logging>();
 
             DateTime startLogs = DateTime.Now;
@@ -59,11 +59,11 @@ namespace ads.Repository
                             {
                                 while (await reader.ReadAsync())
                                 {
-                                    Inventory Olde = new Inventory
+                                    Inv Olde = new Inv
                                     {
                                         Clubs = reader["Store"].ToString(),
                                         Sku = reader["Sku"].ToString(),
-                                        Inv = Convert.ToDecimal(reader["OnHand"].ToString()),
+                                        Inventory = Convert.ToDecimal(reader["OnHand"].ToString()),
                                         Date = ConvertStringDate(reader["DateKey"].ToString()),
                                     };
 
@@ -103,7 +103,7 @@ namespace ads.Repository
                                 var row = dataTable.NewRow();
                                 row["Date"] = rawData.Date;
                                 row["Sku"] = rawData.Sku;
-                                row["Inventory"] = rawData.Inv;
+                                row["Inventory"] = rawData.Inventory;
                                 row["Clubs"] = rawData.Clubs;
                                 dataTable.Rows.Add(row);
 

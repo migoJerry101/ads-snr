@@ -5,35 +5,44 @@ using Microsoft.Data.SqlClient;
 using System.Data;
 using ads.Utility;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.EntityFrameworkCore;
+using ads.Models.Dto.ItemsDto;
+using System.Collections.Immutable;
 
 namespace ads.Repository
 {
-    public class InventoryRepo : IInvetory
+    public class InventoryRepo : IInventory
     {
         private readonly IOpenQuery _openQuery;
-        private readonly ILogs _logs ;
+        private readonly ILogs _logs;
+        private readonly AdsContex _adsContex;
+        private readonly IItem _item;
 
         //private readonly DateConvertion dateConvertion = new DateConvertion();
-        public List<Inventory> _inventoryList = new List<Inventory>();
+        public List<Inv> _inventoryList = new List<Inv>();
 
-        public InventoryRepo(IOpenQuery openQuery, ILogs logs)
-        { 
+        public InventoryRepo(IOpenQuery openQuery, ILogs logs, AdsContex adsContex, IItem item)
+        {
             _logs = logs;
             _openQuery = openQuery;
+            _adsContex = adsContex;
+            _item = item;
         }
 
         //Get Inventory
-        public async Task<List<Inventory>> GetInventoryAsync(string start, string end, List<GeneralModel> skus, List<GeneralModel> sales, List<GeneralModel> inventory)
+        public async Task<List<Inv>> GetInventoryAsync(string start, string end, IEnumerable<ItemSkuDateDto> skus, List<GeneralModel> sales, List<GeneralModel> inventory)
         {
-            List<Inventory> ListCsDate = new List<Inventory>();
+            List<Inv> ListCsDate = new List<Inv>();
 
-            List<Inventory> ListBal = new List<Inventory>();
+            List<Inv> ListBal = new List<Inv>();
 
-            List<Inventory> ListInventory = new List<Inventory>();
+            List<Inv> ListInventory = new List<Inv>();
 
             List<Logging> Log = new List<Logging>();
 
             DateTime startLogs = DateTime.Now;
+
+            //skus = skus.Where(x => itemsDictionary.TryGetValue(x, out var greneralDto)).ToList();
 
             try
             {
@@ -45,37 +54,35 @@ namespace ads.Repository
                         db.Con.Open();
                     }
 
-                    var skuDictionary = skus.ToDictionary(x => x.INUMBR);
-                    
-                    var inventoryDictionary = inventory.GroupBy(y=> y.INUMBR2).ToDictionary(x => x.Key, x=> x.ToList());
+                    var inventoryDictionary = inventory.GroupBy(y => y.INUMBR2).ToDictionary(x => x.Key, x => x.ToList());
                     var SalesDictonary = sales.ToDictionary(y => $"{y.CSSKU + y.CSSTOR}", x => x.CSDATE);
 
 
-                    foreach (var sku in skus)
+                    foreach (var item in skus)
                     {
-                        if (inventoryDictionary.TryGetValue(sku.INUMBR, out var inventoryOut))
+                        if (inventoryDictionary.TryGetValue(item.Sku, out var inventoryOut))
                         {
                             foreach (var inv in inventoryOut)
                             {
-                                if (SalesDictonary.TryGetValue($"{sku.INUMBR + inv.ISTORE}", out var saleDate))
+                                if (SalesDictonary.TryGetValue($"{item + inv.ISTORE}", out var saleDate))
                                 {
                                     var date = saleDate;
 
-                                    ListInventory.Add(new Inventory
+                                    ListInventory.Add(new Inv
                                     {
-                                        Sku = sku.INUMBR,
+                                        Sku = item.Sku,
                                         Clubs = inv.ISTORE,
-                                        Inv = inv.IBHAND,
+                                        Inventory = inv.IBHAND,
                                         Date = DateConvertion.ConvertStringDate(date),
                                     });
                                 }
                                 else
                                 {
-                                    ListInventory.Add(new Inventory
+                                    ListInventory.Add(new Inv
                                     {
-                                        Sku = sku.INUMBR,
+                                        Sku = item.Sku,
                                         Clubs = inv.ISTORE,
-                                        Inv = inv.IBHAND,
+                                        Inventory = inv.IBHAND,
                                         Date = DateConvertion.ConvertStringDate(start),
                                     });
                                 }
@@ -84,11 +91,11 @@ namespace ads.Repository
                         else
                         {
 
-                            ListInventory.Add(new Inventory
+                            ListInventory.Add(new Inv
                             {
-                                Sku = sku.INUMBR,
+                                Sku = item.Sku,
                                 Clubs = string.Empty,
-                                Inv = 0,
+                                Inventory = 0,
                                 Date = DateConvertion.ConvertStringDate(start),
                             });
                         }
@@ -116,7 +123,7 @@ namespace ads.Repository
                                 var row = dataTable.NewRow();
                                 row["Date"] = rawData.Date;
                                 row["Sku"] = rawData.Sku;
-                                row["Inventory"] = rawData.Inv;
+                                row["Inventory"] = rawData.Inventory;
                                 row["Clubs"] = rawData.Clubs;
                                 dataTable.Rows.Add(row);
 
@@ -183,7 +190,7 @@ namespace ads.Repository
                         command.Parameters.AddWithValue("@PageSize", pageSize);
                         command.Parameters.AddWithValue("@dateListString", dateListString);
                         command.CommandTimeout = 18000;
-                        var inventories = new List<Inventory>();
+                        var inventories = new List<Inv>();
                         con.Open();
 
                         // Open the connection and execute the command
@@ -195,11 +202,11 @@ namespace ads.Repository
 
                             var date = reader.GetDateTime("Date");
 
-                            Inventory Olde = new Inventory
+                            Inv Olde = new Inv
                             {
                                 Clubs = reader["Clubs"].ToString(),
                                 Sku = reader["Sku"].ToString(),
-                                Inv = Convert.ToDecimal(reader["Inventory"].ToString()),
+                                Inventory = Convert.ToDecimal(reader["Inventory"].ToString()),
                                 Date = date,
                             };
 
@@ -252,7 +259,7 @@ namespace ads.Repository
                     EndLog = endLogs,
                     Action = "Error",
                     Message = "GetInventories : " + e.Message + " ",
-                    Record_Date = DateConvertion.ConvertStringDate(dateListString)  
+                    Record_Date = DateConvertion.ConvertStringDate(dateListString)
                 });
 
                 _logs.InsertLogs(Log);
@@ -261,9 +268,9 @@ namespace ads.Repository
         }
 
         //list Inventory 
-        public async Task<List<Inventory>> ListInv(string dateListString, OledbCon db)
+        public async Task<List<Inv>> ListInv(string dateListString, OledbCon db)
         {
-            _inventoryList = new List<Inventory>();
+            _inventoryList = new List<Inv>();
             var tasks = new List<Task>();
 
             //var pageSize = 400000;
@@ -319,7 +326,7 @@ namespace ads.Repository
         {
             int totalCount = 0;
 
-            string query = "select COUNT(Id) as Count from tbl_inv where Date in (" + dateListString +") ";
+            string query = "select COUNT(Id) as Count from tbl_inv where Date in (" + dateListString + ") ";
 
             using (SqlCommand cmd = new SqlCommand(query, db.Con))
             {
@@ -336,9 +343,16 @@ namespace ads.Repository
             return totalCount;
         }
 
-        public async Task<List<Inventory>> GetInventoriesByDate(DateTime date)
+        public async Task<List<Inv>> GetInventoriesByDateEf(DateTime date)
         {
-            _inventoryList = new List<Inventory>();
+            var inventories = await _adsContex.Inventories.Where(x => x.Date == date).ToListAsync();
+
+            return inventories;
+        }
+
+        public async Task<List<Inv>> GetInventoriesByDate(DateTime date)
+        {
+            _inventoryList = new List<Inv>();
             var tasks = new List<Task>();
             var dateWithZeroTime = new DateTime(date.Year, date.Month, date.Day, 0, 0, 0, 0);
             var dateInString = $"'{dateWithZeroTime.ToString("yyyy-MM-dd HH:mm:ss.fff")}'";
@@ -348,7 +362,7 @@ namespace ads.Repository
                 await db.OpenAsync();
                 var rowCount = await CountInventory(dateInString, db);
 
-                if(rowCount == 0) return _inventoryList;
+                if (rowCount == 0) return _inventoryList;
 
                 var pageSize = (int)Math.Ceiling((double)rowCount / 5);
                 var totalPages = (int)Math.Ceiling((double)rowCount / pageSize);
@@ -366,24 +380,77 @@ namespace ads.Repository
             return _inventoryList;
         }
 
-        public Dictionary<string, decimal> GetDictionayOfTotalInventory(List<Inventory> inventories)
+        public Dictionary<string, decimal> GetDictionayOfTotalInventory(List<Inv> inventories)
         {
             var inventoryDictionary = inventories.GroupBy(x => x.Sku).ToDictionary(
                 group => group.Key,
-                group => group.Sum(item => item.Inv)
+                group => group.Sum(item => item.Inventory)
             );
 
             return inventoryDictionary;
         }
 
-        public Dictionary<string, decimal> GetDictionayOfPerClubhlInventory(List<Inventory> inventories)
+        public Dictionary<string, decimal> GetDictionayOfPerClubhlInventory(List<Inv> inventories)
         {
             var inventoryDictionary = inventories.GroupBy(x => $"{x.Sku}{x.Clubs}").ToDictionary(
                 group => group.Key,
-                group => group.Sum(item => item.Inv)
+                group => group.Sum(item => item.Inventory)
             );
 
             return inventoryDictionary;
+        }
+
+        public async Task<List<Inv>> GetEFInventoriesByDate(DateTime date)
+        {
+            var inventories = await _adsContex.Inventories.Where(x => x.Date == date).ToListAsync();
+
+            return inventories;
+        }
+
+        public async Task BatchUpdateInventoryBysales(List<Sale> updatedSales)
+        {
+            var startLog = DateTime.Now;
+
+            try
+            {
+                var date = updatedSales.First().Date;
+                var invToUpdateDictionary = await _adsContex.Inventories
+                    .Where(x => x.Date == date)
+                    .ToDictionaryAsync(x => new { x.Sku, x.Clubs, x.Date }, y => y);
+
+                foreach (var sales in updatedSales)
+                {
+                    var key = new { sales.Sku, sales.Clubs, sales.Date };
+                    var hasEntry = invToUpdateDictionary.TryGetValue(key, out var invOut);
+
+                    if (invOut != null)
+                    {
+                        invOut.Inventory += sales.Sales;
+
+                        if (invOut.Inventory < 0) invOut.Inventory = 0;
+                    }
+                }
+
+                await _adsContex.SaveChangesAsync();
+            }
+            catch (Exception e)
+            {
+                var logs = new List<Logging>();
+                Console.WriteLine("Error: " + e.Message);
+
+                DateTime endLogs = DateTime.Now;
+                logs.Add(new Logging
+                {
+                    StartLog = startLog,
+                    EndLog = endLogs,
+                    Action = "Error",
+                    Message = "BatchUpdateInventoryBysales : " + e.Message + " ",
+                    Record_Date = endLogs
+                });
+
+                _logs.InsertLogs(logs);
+            }
+
         }
     }
 }

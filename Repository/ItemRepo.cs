@@ -1,5 +1,6 @@
 ﻿using ads.Data;
 using ads.Interface;
+using ads.Models.Dto.ItemsDto;
 using Microsoft.EntityFrameworkCore;
 
 namespace ads.Repository
@@ -17,6 +18,20 @@ namespace ads.Repository
             var skus = await _adsContex.Items.Select(x => x.Sku.ToString()).ToListAsync();
 
             return skus;
+        }
+
+        public async Task<List<ItemSkuDateDto>> GetAllSkuWithDate()
+        {
+            var items = await _adsContex.Items
+                .Select(x =>
+                    new ItemSkuDateDto()
+                    { 
+                        Sku = x.Sku,
+                        CreatedDate = x.CreatedDate
+                    })
+                .ToListAsync();
+
+            return items;
         }
     }
 }

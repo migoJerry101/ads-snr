@@ -25,19 +25,20 @@ namespace ads.Repository
 {
     public class CronJobsADSRepo : IJob
     {
-        private readonly IInvetory _inventory;
+        private readonly IInventory _inventory;
         private readonly ISales _sales;
         private readonly IAds _ads;
         private readonly IOpenQuery _openQuery;
-
+        private readonly IItem _item;
         private readonly LogsRepo localQuery = new LogsRepo();
 
-        public CronJobsADSRepo(IInvetory invetory, ISales sales, IAds ads, IOpenQuery openQuery)
+        public CronJobsADSRepo(IInventory invetory, ISales sales, IAds ads, IOpenQuery openQuery, IItem item)
         {
             _inventory = invetory;
             _sales = sales;
             _ads = ads;
             _openQuery = openQuery;
+            _item = item;
         }
 
         public async Task Execute(IJobExecutionContext context)
@@ -62,8 +63,10 @@ namespace ads.Repository
             string startDate = previousDate.ToString("yyMMdd");
             string endDate = previousDate.ToString("yyMMdd");
 
+
             try
             {
+                var dateFormat = DateConvertion.ConvertStringDate(startDate);
 
                 using (OledbCon db = new OledbCon())
                 {
@@ -71,17 +74,17 @@ namespace ads.Repository
                     await _openQuery.ImportItems(db);
                     await _openQuery.ImportClubs(db);
 
+                    var itemList = await _item.GetAllSkuWithDate();
+                    var items = itemList.Where(x => x.CreatedDate <= dateFormat);
+
                     var inventory = await _openQuery.ListIventory(db);
-                    var skus = await _openQuery.ListOfAllSKu(db);
                     var sales = await _openQuery.ListOfSales(db, startDate, endDate);
 
-                    await _inventory.GetInventoryAsync(startDate, startDate, skus, sales, inventory);
-                    await _sales.GetSalesAsync(startDate, startDate, skus, sales, inventory);
-
+                    await _inventory.GetInventoryAsync(startDate, startDate, items, sales, inventory);
+                    await _sales.GetSalesAsync(startDate, startDate, items, sales, inventory);
                 }
 
-                await _ads.ComputeAds();
-
+                await _ads.ComputeAds(dateFormat);
             }
             catch (Exception e)
             {
