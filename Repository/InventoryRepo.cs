@@ -350,13 +350,6 @@ namespace ads.Repository
             return inventories;
         }
 
-        public  IEnumerable<Inv> GetInventoriesByDateEf2(DateTime date)
-        {
-            var inventories = _adsContex.Inventories.Where(x => x.Date == date);
-
-            return inventories;
-        }
-
         public async Task<List<Inv>> GetInventoriesByDate(DateTime date)
         {
             _inventoryList = new List<Inv>();
