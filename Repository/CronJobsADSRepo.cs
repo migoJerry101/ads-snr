@@ -63,17 +63,19 @@ namespace ads.Repository
             string startDate = previousDate.ToString("yyMMdd");
             string endDate = previousDate.ToString("yyMMdd");
 
-            var itemList = await _item.GetAllSkuWithDate();
-            var dateFormat = DateConvertion.ConvertStringDate(startDate);
-            var items = itemList.Where(x => x.CreatedDate <= dateFormat);
 
             try
             {
+                var dateFormat = DateConvertion.ConvertStringDate(startDate);
+
                 using (OledbCon db = new OledbCon())
                 {
                     await db.OpenAsync();
                     await _openQuery.ImportItems(db);
                     await _openQuery.ImportClubs(db);
+
+                    var itemList = await _item.GetAllSkuWithDate();
+                    var items = itemList.Where(x => x.CreatedDate <= dateFormat);
 
                     var inventory = await _openQuery.ListIventory(db);
                     var sales = await _openQuery.ListOfSales(db, startDate, endDate);

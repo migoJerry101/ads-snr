@@ -549,8 +549,8 @@ namespace ads.Repository
             var salesDayZeroWithoutNullClubs = salesDayZero.Where(i => !i.Clubs.IsNullOrEmpty());
 
             //getInventory today and dayzero
-            var inventoryToday = await _invetory.GetInventoriesByDateEF(CurrentDateWithZeroTime);
-            var inventoryDayZero = await _invetory.GetInventoriesByDateEF(endDateOut);
+            var inventoryToday = await _invetory.GetInventoriesByDateEf(CurrentDateWithZeroTime);
+            var inventoryDayZero = await _invetory.GetInventoriesByDateEf(endDateOut);
 
             var inventoryDayZeroWithoutNullClubs = inventoryDayZero.Where(i => !i.Clubs.IsNullOrEmpty());
             var inventoryTodayWithoutNullClubs = inventoryToday.Where(c => !c.Clubs.IsNullOrEmpty());
@@ -666,6 +666,20 @@ namespace ads.Repository
 
                         adsWithCurrentsales.Add(newAds);
                     }
+                    else
+                    {
+                        var newAds = new TotalAdsChain()
+                        {
+                            Divisor = 0,
+                            Sales = 0,
+                            Ads = 0,
+                            Sku = item.Sku,
+                            StartDate = startDateInString,
+                            EndDate = startDateInString
+                        };
+
+                        adsWithCurrentsales.Add(newAds);
+                    }
                 }
             }
 
@@ -674,8 +688,12 @@ namespace ads.Repository
             var adsPerClubs = await _totalAdsClubRepo.GetTotalAdsClubsByDate($"{adsStartDate:yyyy-MM-dd HH:mm:ss.fff}");
             var totalAdsClubDictionary = adsPerClubs.ToDictionary(x => new { x.Sku, x.Clubs });
 
-            var salesTodayWithoutNullClubsDictionary = salesTodayWithoutNullClubs.GroupBy(x => new { x.Sku, x.Clubs }).ToDictionary(group => group.Key, group => group.Sum(y => y.Sales));
-            var salesDayZeroWithoutNullClubsDictionary = salesDayZeroWithoutNullClubs.GroupBy(x => new { x.Sku, x.Clubs }).ToDictionary(group => group.Key, group => group.Sum(y => y.Sales));
+            var salesTodayWithoutNullClubsDictionary = salesTodayWithoutNullClubs
+                .GroupBy(x => new { x.Sku, x.Clubs })
+                .ToDictionary(group => group.Key, group => group.Sum(y => y.Sales));
+            var salesDayZeroWithoutNullClubsDictionary = salesDayZeroWithoutNullClubs
+                .GroupBy(x => new { x.Sku, x.Clubs })
+                .ToDictionary(group => group.Key, group => group.Sum(y => y.Sales));
 
             var inventoryDayZeroWithoutNullClubsDictionary = inventoryDayZeroWithoutNullClubs.ToDictionary(x => new { x.Sku, x.Clubs }, y => y.Inventory);
             //var inventoryTodayWithoutNullClubsDictionary = inventoryTodayWithoutNullClubs.ToDictionary(x => new { x.Sku, x.Clubs }, y => y.Inv);
@@ -743,7 +761,7 @@ namespace ads.Repository
                     var currentDateCheck = DateTime.Now;
                     clubsDictionary.TryGetValue(Convert.ToInt32(inv.Clubs), out var StartDate);
 
-                    if (currentDateCheck > StartDate && perClubSalesToday >= 0)
+                    if (perClubSalesToday >= 0)
                     {
                         var newAds = new TotalAdsClub()
                         {
@@ -765,6 +783,24 @@ namespace ads.Repository
                         {
                             newAds.Divisor = 1;
                         }
+
+                        if (currentDateCheck > StartDate)
+                        {
+                            adsPerClubsWithCurrentsales.Add(newAds);
+                        }
+                    }
+                    else
+                    {
+                        var newAds = new TotalAdsClub()
+                        {
+                            Divisor = 0,
+                            Sales = 0,
+                            Ads = 0,
+                            Sku = inv.Sku,
+                            Clubs = inv.Clubs,
+                            StartDate = startDateInString,
+                            EndDate = startDateInString
+                        };
 
                         adsPerClubsWithCurrentsales.Add(newAds);
                     }

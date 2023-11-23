@@ -160,7 +160,7 @@ namespace ads.Controllers
                         })
                         .ToList();
 
-                    var sales = await _sales.GetSalesByDateEf(dateFormat);
+                    var sales = await _sales.GetSalesByDate(dateFormat);
                     var updatedSales = _sales.GetAdjustedSalesValue(sales, uniqueSales);
 
                     //updates inventory using Updated sales
@@ -176,7 +176,7 @@ namespace ads.Controllers
                             IBHAND = y.Inventory
                         }).ToList();
 
-                    await _sales.DeleteSalesByDateAsync(dateFormat);
+                    _sales.DeleteSalesByDate(dateFormat);
                     await _sales.GetSalesAsync(date, date, itemsSku, listOfSales, invetiriesInDate);
                 }
             }

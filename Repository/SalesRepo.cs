@@ -3,7 +3,9 @@ using ads.Interface;
 using ads.Models.Data;
 using ads.Models.Dto.ItemsDto;
 using ads.Utility;
+using DocumentFormat.OpenXml.Drawing;
 using DocumentFormat.OpenXml.InkML;
+using DocumentFormat.OpenXml.Wordprocessing;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
@@ -20,16 +22,18 @@ namespace ads.Repository
         private readonly ILogs _logs;
         private readonly AdsContex _adsContex;
         private readonly IItem _item;
+        private readonly IConfiguration _configuration;
 
         //private readonly DateConvertion dateConvertion = new DateConvertion();
         private List<Sale> _saleList = new List<Sale>();
 
-        public SalesRepo(IOpenQuery openQuery, ILogs logs, AdsContex adsContex, IItem item)
+        public SalesRepo(IOpenQuery openQuery, ILogs logs, AdsContex adsContex, IItem item, IConfiguration configuration)
         {
             _openQuery = openQuery;
             _logs = logs;
             _adsContex = adsContex;
             _item = item;
+            _configuration = configuration;
         }
 
         private List<Sale> GenerateListOfDataRows(List<GeneralModel> datas, string sku, bool hasSales, bool useStartDate, string? date)
@@ -142,7 +146,6 @@ namespace ads.Repository
                             dataTable.Columns.Add("Id", typeof(int));
                             dataTable.Columns.Add("Clubs", typeof(string));
                             dataTable.Columns.Add("Sku", typeof(string));
-                            //dataTable.Columns.Add("Inventory", typeof(decimal));
                             dataTable.Columns.Add("Sales", typeof(decimal));
                             dataTable.Columns.Add("Date", typeof(DateTime));
 
@@ -151,7 +154,6 @@ namespace ads.Repository
                                 var row = dataTable.NewRow();
                                 row["Clubs"] = rowData.Clubs;
                                 row["Sku"] = rowData.Sku;
-                                //row["Inventory"] = rowData.Inventory;
                                 row["Sales"] = rowData.Sales;
                                 row["Date"] = rowData.Date;
                                 dataTable.Rows.Add(row);
@@ -195,6 +197,50 @@ namespace ads.Repository
             }
 
 
+        }
+
+        public void DeleteSalesByDate(DateTime date)
+        {
+            DateTime startLogs = DateTime.Now;
+            List<Logging> Log = new List<Logging>();
+
+            try
+            {
+                var strConn = _configuration["ConnectionStrings:DatabaseConnection"];
+                //string strConn = "data source='199.84.0.201';Initial Catalog=ADS.UAT;User Id=sa;password=@dm1n@8800;Trusted_Connection=false;MultipleActiveResultSets=true;TrustServerCertificate=True;";
+                var con = new SqlConnection(strConn);
+
+                using (var command = new SqlCommand("_sp_DeleteSalesByDate", con))
+                {
+                    command.CommandType = CommandType.StoredProcedure;
+                    command.Parameters.AddWithValue("@date", date);
+                    command.CommandTimeout = 18000;
+                    con.Open();
+
+                    // Open the connection and execute the command
+                    SqlDataReader reader = command.ExecuteReader();
+
+                    reader.Close();
+                    con.Close();
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Error: " + e.Message);
+
+                DateTime endLogs = DateTime.Now;
+
+                Log.Add(new Logging
+                {
+                    StartLog = startLogs,
+                    EndLog = endLogs,
+                    Action = "Error",
+                    Message = "GetAllSales : " + e.Message + " ",
+                    Record_Date = date
+                });
+
+                _logs.InsertLogs(Log);
+            }
         }
 
         public async Task GetAllSales(string dateListString, int pageSize, int offset, OledbCon db)
@@ -385,7 +431,17 @@ namespace ads.Repository
         {
             var salesDictionary = sales.GroupBy(x => x.Sku).ToDictionary(
                  group => group.Key,
-                 group => group.Sum(item => item.Sales)
+                 group =>
+                 {
+                     var count = group.Count();
+
+                     if (count > 1)
+                     {
+                         return group.Where(x => x.Sales >= 0).Sum(item => item.Sales);
+                     }
+
+                     return group.Sum(item => item.Sales);
+                 }
              );
 
             return salesDictionary;
@@ -442,12 +498,20 @@ namespace ads.Repository
             {
                 var hasSales = currentSalesDitionary.TryGetValue(new { sale.Sku, sale.Clubs, sale.Date }, out var saleOut);
 
+                //redeploy after reimport remove rounding off
                 if (hasSales && (Math.Round(sale.Sales) != saleOut.Sales))
                 {
                     //sales - reimported data
                     //salesOut - current data
-                    var diffrenceInSales = saleOut.Sales - sale.Sales;
-                    saleOut.Sales = diffrenceInSales;
+                    if(sale.Sales < 0)
+                    {
+                        saleOut.Sales = Math.Abs(sale.Sales);
+                    }
+                    else
+                    {
+                        var diffrenceInSales = saleOut.Sales - sale.Sales;
+                        saleOut.Sales = diffrenceInSales;
+                    }
 
                     salesWithDiff.Add(saleOut);
                 }

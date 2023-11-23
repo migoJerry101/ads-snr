@@ -15,6 +15,6 @@ namespace ads.Interface
         Dictionary<string, decimal> GetDictionayOfPerClubhlInventory(List<Inv> inventories);
         Task<List<Inv>> GetEFInventoriesByDate(DateTime date);
         Task BatchUpdateInventoryBysales(List<Sale> updatedSales);
-        Task<List<Inv>> GetInventoriesByDateEF(DateTime date);
+        Task<List<Inv>> GetInventoriesByDateEf(DateTime date);
     }
 }

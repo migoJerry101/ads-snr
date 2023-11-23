@@ -7,13 +7,14 @@ using ads.Utility;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.EntityFrameworkCore;
 using ads.Models.Dto.ItemsDto;
+using System.Collections.Immutable;
 
 namespace ads.Repository
 {
     public class InventoryRepo : IInventory
     {
         private readonly IOpenQuery _openQuery;
-        private readonly ILogs _logs ;
+        private readonly ILogs _logs;
         private readonly AdsContex _adsContex;
         private readonly IItem _item;
 
@@ -52,8 +53,8 @@ namespace ads.Repository
                     {
                         db.Con.Open();
                     }
-                    
-                    var inventoryDictionary = inventory.GroupBy(y=> y.INUMBR2).ToDictionary(x => x.Key, x=> x.ToList());
+
+                    var inventoryDictionary = inventory.GroupBy(y => y.INUMBR2).ToDictionary(x => x.Key, x => x.ToList());
                     var SalesDictonary = sales.ToDictionary(y => $"{y.CSSKU + y.CSSTOR}", x => x.CSDATE);
 
 
@@ -258,7 +259,7 @@ namespace ads.Repository
                     EndLog = endLogs,
                     Action = "Error",
                     Message = "GetInventories : " + e.Message + " ",
-                    Record_Date = DateConvertion.ConvertStringDate(dateListString)  
+                    Record_Date = DateConvertion.ConvertStringDate(dateListString)
                 });
 
                 _logs.InsertLogs(Log);
@@ -325,7 +326,7 @@ namespace ads.Repository
         {
             int totalCount = 0;
 
-            string query = "select COUNT(Id) as Count from tbl_inv where Date in (" + dateListString +") ";
+            string query = "select COUNT(Id) as Count from tbl_inv where Date in (" + dateListString + ") ";
 
             using (SqlCommand cmd = new SqlCommand(query, db.Con))
             {
@@ -342,9 +343,16 @@ namespace ads.Repository
             return totalCount;
         }
 
-        public async Task<List<Inv>> GetInventoriesByDateEF(DateTime date)
+        public async Task<List<Inv>> GetInventoriesByDateEf(DateTime date)
         {
             var inventories = await _adsContex.Inventories.Where(x => x.Date == date).ToListAsync();
+
+            return inventories;
+        }
+
+        public  IEnumerable<Inv> GetInventoriesByDateEf2(DateTime date)
+        {
+            var inventories = _adsContex.Inventories.Where(x => x.Date == date);
 
             return inventories;
         }
@@ -361,7 +369,7 @@ namespace ads.Repository
                 await db.OpenAsync();
                 var rowCount = await CountInventory(dateInString, db);
 
-                if(rowCount == 0) return _inventoryList;
+                if (rowCount == 0) return _inventoryList;
 
                 var pageSize = (int)Math.Ceiling((double)rowCount / 5);
                 var totalPages = (int)Math.Ceiling((double)rowCount / pageSize);
@@ -412,13 +420,21 @@ namespace ads.Repository
 
             try
             {
+                var date = updatedSales.First().Date;
+                var invToUpdateDictionary = await _adsContex.Inventories
+                    .Where(x => x.Date == date)
+                    .ToDictionaryAsync(x => new { x.Sku, x.Clubs, x.Date }, y => y);
+
                 foreach (var sales in updatedSales)
                 {
-                    var invToUpdate = await _adsContex.Inventories.SingleOrDefaultAsync(x => x.Date == sales.Date && x.Sku == sales.Sku && x.Clubs == sales.Clubs);
+                    var key = new { sales.Sku, sales.Clubs, sales.Date };
+                    var hasEntry = invToUpdateDictionary.TryGetValue(key, out var invOut);
 
-                    if (invToUpdate != null)
+                    if (invOut != null)
                     {
-                        invToUpdate.Inventory += sales.Sales;
+                        invOut.Inventory += sales.Sales;
+
+                        if (invOut.Inventory < 0) invOut.Inventory = 0;
                     }
                 }
 
