@@ -683,7 +683,8 @@ namespace ads.Repository
                 }
             }
 
-            await SaveTotalAdsChain(adsWithCurrentsales, endDateInString);
+            var recordDate = $"{currentDate.Date:yyyy-MM-dd HH:mm:ss.fff}";
+            await SaveTotalAdsChain(adsWithCurrentsales, recordDate);
 
             var adsPerClubs = await _totalAdsClubRepo.GetTotalAdsClubsByDate($"{adsStartDate:yyyy-MM-dd HH:mm:ss.fff}");
             var totalAdsClubDictionary = adsPerClubs.ToDictionary(x => new { x.Sku, x.Clubs });
@@ -807,7 +808,7 @@ namespace ads.Repository
                 }
             }
 
-            await SaveAdsPerClubs(adsPerClubsWithCurrentsales, endDateInString);
+            await SaveAdsPerClubs(adsPerClubsWithCurrentsales, recordDate);
         }
 
         private async Task SaveAdsPerClubs(List<TotalAdsClub> adsPerClubs, string lastDate)
