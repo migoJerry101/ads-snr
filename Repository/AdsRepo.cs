@@ -683,7 +683,7 @@ namespace ads.Repository
                 }
             }
 
-            var recordDate = $"{currentDate.Date:yyyy-MM-dd HH:mm:ss.fff}";
+            var recordDate = currentDate.Date;
             await SaveTotalAdsChain(adsWithCurrentsales, recordDate);
 
             var adsPerClubs = await _totalAdsClubRepo.GetTotalAdsClubsByDate($"{adsStartDate:yyyy-MM-dd HH:mm:ss.fff}");
@@ -811,7 +811,7 @@ namespace ads.Repository
             await SaveAdsPerClubs(adsPerClubsWithCurrentsales, recordDate);
         }
 
-        private async Task SaveAdsPerClubs(List<TotalAdsClub> adsPerClubs, string lastDate)
+        private async Task SaveAdsPerClubs(List<TotalAdsClub> adsPerClubs, DateTime lastDate)
         {
             var Log = new List<Logging>();
             var startLogs = DateTime.Now;
@@ -864,7 +864,7 @@ namespace ads.Repository
                         EndLog = endLogs,
                         Action = "Total ADS",
                         Message = "Total Clubs Inserted : " + adsPerClubs.Count() + "",
-                        Record_Date = DateConvertion.ConvertStringDate(lastDate)
+                        Record_Date = lastDate
                     });
 
                     localQuery.InsertLogs(Log);
@@ -879,14 +879,14 @@ namespace ads.Repository
                     EndLog = endLogs,
                     Action = "Error",
                     Message = "SaveAdsPerClubs  : " + e.Message + "",
-                    Record_Date = DateConvertion.ConvertStringDate(lastDate)
+                    Record_Date = lastDate
                 });
 
                 localQuery.InsertLogs(Log);
             }
         }
 
-        private async Task SaveTotalAdsChain(List<TotalAdsChain> totalAds, string lastDate)
+        private async Task SaveTotalAdsChain(List<TotalAdsChain> totalAds, DateTime lastDate)
         {
             var Log = new List<Logging>();
             var startLogs = DateTime.Now;
@@ -939,7 +939,7 @@ namespace ads.Repository
                         EndLog = endLogs,
                         Action = "Total ADS",
                         Message = "Total Sku Inserted : " + totalAds.Count() + "",
-                        Record_Date = DateConvertion.ConvertStringDate(lastDate)
+                        Record_Date = lastDate
                     });
 
                     localQuery.InsertLogs(Log);
@@ -954,7 +954,7 @@ namespace ads.Repository
                     EndLog = endLogs,
                     Action = "Error",
                     Message = "SaveTotalAdsChain  : " + e.Message + "",
-                    Record_Date = DateConvertion.ConvertStringDate(lastDate)
+                    Record_Date = lastDate
                 });
 
                 localQuery.InsertLogs(Log);
