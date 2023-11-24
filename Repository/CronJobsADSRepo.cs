@@ -84,7 +84,7 @@ namespace ads.Repository
                     await _sales.GetSalesAsync(startDate, startDate, items, sales, inventory);
                 }
 
-                await _ads.ComputeAds(dateFormat);
+                await _ads.ComputeAds(currentDate.Date);
             }
             catch (Exception e)
             {
