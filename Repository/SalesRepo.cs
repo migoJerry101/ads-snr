@@ -79,7 +79,9 @@ namespace ads.Repository
 
                     foreach (var item in skus)
                     {
-                        if (salesLookup.TryGetValue(item.Sku, out var salesOut))
+                        var hasSales = salesLookup.TryGetValue(item.Sku, out var salesOut);
+
+                        if (hasSales && (salesOut is not null))
                         {
                             foreach (var data in salesOut)
                             {
@@ -93,44 +95,40 @@ namespace ads.Repository
 
                                 listOfOledb.Add(Olde);
                             }
-                            //var generatedList = GenerateListOfDataRows(salesOut, sku.INUMBR, false, false, start);
-
-                            //listOfOledb.AddRange(generatedList);
                         }
-                        else
-                        {
-                            if (inventoryLookup.TryGetValue(item.Sku, out var inventoryOut))
-                            {
-                                //var generatedList = GenerateListOfDataRows(inventoryOut, sku.INUMBR, true, true, start);
-                                foreach (var data in inventoryOut)
-                                {
-                                    var Olde = new Sale
-                                    {
-                                        Sku = item.Sku,
-                                        Clubs = data.ISTORE,
-                                        Sales = 0,
-                                        Date = DateConvertion.ConvertStringDate(start),
-                                    };
 
-                                    listOfOledb.Add(Olde);
-                                }
-                                //listOfOledb.AddRange(generatedList);
-                            }
-                            else
+                        var hasInv = inventoryLookup.TryGetValue(item.Sku, out var inventoryOut);
+
+                        if (hasInv && (inventoryOut is not null))
+                        {
+                            foreach (var data in inventoryOut)
                             {
-                                // this entry is in the master list of sku, but not yet part of sales and enventory table
-                                // this is used when computing chain/all store ADS
-                                // this is filtered out when computing ADS of per store per sku
                                 var Olde = new Sale
                                 {
                                     Sku = item.Sku,
-                                    Clubs = string.Empty,
+                                    Clubs = data.ISTORE,
                                     Sales = 0,
                                     Date = DateConvertion.ConvertStringDate(start),
                                 };
 
                                 listOfOledb.Add(Olde);
                             }
+                        }
+
+                        if(!hasInv & !hasSales)
+                        {
+                            // this entry is in the master list of sku, but not yet part of sales and enventory table
+                            // this is used when computing chain/all store ADS
+                            // this is filtered out when computing ADS of per store per sku
+                            var Olde = new Sale
+                            {
+                                Sku = item.Sku,
+                                Clubs = string.Empty,
+                                Sales = 0,
+                                Date = DateConvertion.ConvertStringDate(start),
+                            };
+
+                            listOfOledb.Add(Olde);
                         }
                     }
 
@@ -499,11 +497,11 @@ namespace ads.Repository
                 var hasSales = currentSalesDitionary.TryGetValue(new { sale.Sku, sale.Clubs, sale.Date }, out var saleOut);
 
                 //redeploy after reimport remove rounding off
-                if (hasSales && (Math.Round(sale.Sales) != saleOut.Sales))
+                if (hasSales && (sale.Sales != saleOut.Sales))
                 {
                     //sales - reimported data
                     //salesOut - current data
-                    if(sale.Sales < 0)
+                    if (sale.Sales < 0)
                     {
                         saleOut.Sales = Math.Abs(sale.Sales);
                     }

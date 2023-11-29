@@ -623,14 +623,14 @@ namespace ads.Repository
                         {
                             ads.Sales += totalSalesOut;
                             ads.Divisor++;
-                            ads.Ads = Math.Round(ads.Sales / ads.Divisor, 2);
+                            ads.Ads = ads.Divisor != 0 ? Math.Round(ads.Sales / ads.Divisor, 2) : 0;
                         }
 
                         if (totalInvOut == 0 && totalSalesOut > 0)
                         {
                             ads.Sales += totalSalesOut;
                             ads.Divisor++;
-                            ads.Ads = Math.Round(ads.Sales / ads.Divisor, 2);
+                            ads.Ads = ads.Divisor != 0 ? Math.Round(ads.Sales / ads.Divisor, 2) : 0;
                         }
                     }
 
@@ -648,7 +648,7 @@ namespace ads.Repository
                         {
                             Divisor = 0,
                             Sales = saleCheckedVal,
-                            Ads = Math.Round(totalSalesOut / 1, 2),
+                            Ads = totalSalesOut != 0 ? Math.Round(totalSalesOut / 1, 2) : 0,
                             Sku = item.Sku,
                             StartDate = startDateInString,
                             EndDate = startDateInString
@@ -743,14 +743,14 @@ namespace ads.Repository
                         {
                             adsOut.Sales += perClubSalesToday;
                             adsOut.Divisor++;
-                            adsOut.Ads = Math.Round(adsOut.Sales / adsOut.Divisor, 2);
+                            adsOut.Ads = adsOut.Divisor != 0 ? Math.Round(adsOut.Sales / adsOut.Divisor, 2) : 0;
                         }
 
                         if (inv.Inventory == 0 && perClubSalesToday > 0)
                         {
                             adsOut.Sales += perClubSalesToday;
                             adsOut.Divisor++;
-                            adsOut.Ads = Math.Round(adsOut.Sales / adsOut.Divisor, 2);
+                            adsOut.Ads = adsOut.Divisor != 0 ?  Math.Round(adsOut.Sales / adsOut.Divisor, 2) : 0;
                         }
                     }
 
@@ -768,7 +768,7 @@ namespace ads.Repository
                         {
                             Divisor = 0,
                             Sales = perClubSalesToday,
-                            Ads = Math.Round(perClubSalesToday / 1, 2),
+                            Ads = perClubSalesToday != 0 ? Math.Round(perClubSalesToday / 1, 2) : 0,
                             Sku = inv.Sku,
                             Clubs = inv.Clubs,
                             StartDate = startDateInString,
