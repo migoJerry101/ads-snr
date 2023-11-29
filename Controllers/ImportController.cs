@@ -124,6 +124,61 @@ namespace ads.Controllers
         }
 
         [HttpPost]
+        [Route("ReImportSalesExcludingInventory")]
+        public async Task<IActionResult> ReImportSalesExcludingInventory(List<string> dates)
+        {
+            using (OledbCon db = new OledbCon())
+            {
+                await db.OpenAsync();
+                await _openQuery.ImportItems(db);
+                var items = await _item.GetAllSkuWithDate();
+
+                foreach (var date in dates)
+                {
+                    var dateFormat = DateConvertion.ConvertStringDate(date);
+                    var itemsSku = items.Where(x => x.CreatedDate <= dateFormat);
+                    var itemsDictionary = itemsSku.Where(x => x.CreatedDate <= dateFormat).ToDictionary(y => y.Sku, y => y);
+                    //listOfSales is sales from mms
+                    var listOfSales = await _openQuery.ListOfSales(db, date, date);
+
+                    var reImportedSales = listOfSales.Select(x => new Sale()
+                    {
+                        Date = dateFormat,
+                        Sales = x.CSQTY,
+                        Sku = x.CSSKU,
+                        Clubs = x.CSSTOR
+                    });
+
+                    var uniqueSales = reImportedSales
+                        .GroupBy(s => new { s.Clubs, s.Sku, s.Date })
+                        .Select(g => new Sale()
+                        {
+                            Clubs = g.Key.Clubs,
+                            Sku = g.Key.Sku,
+                            Date = g.Key.Date,
+                            Sales = g.Sum(s => s.Sales)
+                        })
+                        .ToList();
+
+                    var inventories = await _inventory.GetEFInventoriesByDate(dateFormat);
+                    var invetiriesInDate = inventories
+                        .Where(x => itemsDictionary.TryGetValue(x.Sku, out var greneralDto))
+                        .Select(y => new GeneralModel()
+                        {
+                            INUMBR2 = y.Sku,
+                            ISTORE = y.Clubs,
+                            IBHAND = y.Inventory
+                        }).ToList();
+
+                    _sales.DeleteSalesByDate(dateFormat);
+                    await _sales.GetSalesAsync(date, date, itemsSku, listOfSales, invetiriesInDate);
+                }
+            }
+
+            return Ok();
+        }
+
+        [HttpPost]
         [Route("ReImportSales")]
         public async Task<IActionResult> ReImportSales(List<string> dates)
         {
@@ -160,7 +215,7 @@ namespace ads.Controllers
                         })
                         .ToList();
 
-                    var sales = await _sales.GetSalesByDate(dateFormat);
+                    var sales = await _sales.GetSalesByDateEf(dateFormat);
                     var updatedSales = _sales.GetAdjustedSalesValue(sales, uniqueSales);
 
                     //updates inventory using Updated sales
