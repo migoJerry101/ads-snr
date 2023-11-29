@@ -684,7 +684,7 @@ namespace ads.Repository
             }
 
             var recordDate = currentDate.Date;
-            //await SaveTotalAdsChain(adsWithCurrentsales, recordDate);
+            await SaveTotalAdsChain(adsWithCurrentsales, recordDate);
 
             var adsPerClubs = await _totalAdsClubRepo.GetTotalAdsClubsByDate($"{adsStartDate:yyyy-MM-dd HH:mm:ss.fff}");
             var totalAdsClubDictionary = adsPerClubs.ToDictionary(x => new { x.Sku, x.Clubs });
