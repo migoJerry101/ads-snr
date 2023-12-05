@@ -103,9 +103,9 @@ namespace ads.Repository
                         {
                             //remove inventory entry in sales
                             var salesList = salesOut != null ? salesOut?.Select(x => x.CSSTOR).AsEnumerable() : new List<string>();
-                            var sanituzedInv = inventoryOut.Where(x => !salesList.Contains(x.ISTORE));
+                            var sanitizedInv = inventoryOut.Where(x => !salesList.Contains(x.ISTORE));
 
-                            foreach (var data in sanituzedInv)
+                            foreach (var data in sanitizedInv)
                             {
                                 var Olde = new Sale
                                 {
