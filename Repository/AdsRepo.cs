@@ -580,9 +580,7 @@ namespace ads.Repository
                     var hasSales = salesTotalDictionaryDayZero.TryGetValue(item.Sku, out var totalSalesOut);
                     var hasInventory = inventoryTodayDictionaryDayZero.TryGetValue(item.Sku, out var totalInvOut);
 
-                    var daysDifferenceOut = DateComputeUtility.GetDifferenceInRange(ads.StartDate, ads.EndDate);
-
-                    if (daysDifferenceOut == 56)
+                    if (ads.Divisor == 56)
                     {
                         var newEndDate = endDateOut.AddDays(1);
                         var endDateInStringNew = $"{newEndDate:yyyy-MM-dd HH:mm:ss.fff}";
@@ -709,9 +707,7 @@ namespace ads.Repository
 
                 if (hasAds)
                 {
-                    var daysDifferenceOut = DateComputeUtility.GetDifferenceInRange(adsOut.StartDate, adsOut.EndDate);
-
-                    if (daysDifferenceOut == 56)
+                    if (adsOut?.Divisor == 56)
                     {
                         salesDayZeroWithoutNullClubsDictionary.TryGetValue(new { inv.Sku, inv.Clubs }, out var perClubSalesDayZero);
                         inventoryDayZeroWithoutNullClubsDictionary.TryGetValue(new { inv.Sku, inv.Clubs }, out var perClubInvDayZero);
