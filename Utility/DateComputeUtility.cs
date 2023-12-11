@@ -41,7 +41,7 @@ namespace ads.Utility
             string format = "yyyy-MM-dd HH:mm:ss.fff";
             DateTime.TryParseExact(startDate, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime startDateCheckOut);
             DateTime.TryParseExact(endDate, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime endDateCheckOut);
-            TimeSpan differenceOut = startDateCheckOut - endDateCheckOut;
+            TimeSpan differenceOut = startDateCheckOut.AddDays(1) - endDateCheckOut;
 
             return differenceOut.Days;
         }

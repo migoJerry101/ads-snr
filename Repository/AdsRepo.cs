@@ -710,7 +710,7 @@ namespace ads.Repository
                 if (hasAds)
                 {
                     var daysDifferenceOut = DateComputeUtility.GetDifferenceInRange(adsOut.StartDate, adsOut.EndDate);
-
+                    
                     if (daysDifferenceOut == 56)
                     {
                         salesDayZeroWithoutNullClubsDictionary.TryGetValue(new { inv.Sku, inv.Clubs }, out var perClubSalesDayZero);

@@ -1,4 +1,5 @@
 ﻿using ads.Interface;
+using ads.Utility;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 
@@ -25,6 +26,5 @@ namespace ads.Controllers
 
             return Ok(new { successfull = "Success" });
         }
-
     }
 }
