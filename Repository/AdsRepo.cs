@@ -17,7 +17,7 @@ namespace ads.Repository
 {
     public class AdsRepo : IAds
     {
-/*        private readonly OpenQueryRepo openQuery = new OpenQueryRepo();*/
+        /*        private readonly OpenQueryRepo openQuery = new OpenQueryRepo();*/
         private readonly LogsRepo localQuery = new LogsRepo();
         public List<TotalAdsChain> _totalAdsChain = new List<TotalAdsChain>();
         public List<TotalAdsClub> _totalAdsClubs = new List<TotalAdsClub>();
@@ -591,15 +591,15 @@ namespace ads.Repository
                         {
                             ads.Sales -= totalSalesOut;
                             ads.Divisor--;
-                            ads.EndDate = endDateInStringNew;
                         }
 
                         if (totalInvOut == 0 && totalSalesOut > 0)
                         {
                             ads.Sales -= totalSalesOut;
                             ads.Divisor--;
-                            ads.EndDate = endDateInStringNew;
                         }
+
+                        ads.EndDate = endDateInStringNew;
                     }
 
                     adsWithCurrentsales.Add(ads);
@@ -621,15 +621,17 @@ namespace ads.Repository
                     {
                         if (totalInvOut > 0)
                         {
+                            if (ads.Divisor != 56) ads.Divisor++;
+
                             ads.Sales += totalSalesOut;
-                            ads.Divisor++;
                             ads.Ads = ads.Divisor != 0 ? Math.Round(ads.Sales / ads.Divisor, 2) : 0;
                         }
 
                         if (totalInvOut == 0 && totalSalesOut > 0)
                         {
+                            if (ads.Divisor != 56) ads.Divisor++;
+
                             ads.Sales += totalSalesOut;
-                            ads.Divisor++;
                             ads.Ads = ads.Divisor != 0 ? Math.Round(ads.Sales / ads.Divisor, 2) : 0;
                         }
                     }
@@ -710,7 +712,7 @@ namespace ads.Repository
                 if (hasAds)
                 {
                     var daysDifferenceOut = DateComputeUtility.GetDifferenceInRange(adsOut.StartDate, adsOut.EndDate);
-                    
+
                     if (daysDifferenceOut == 56)
                     {
                         salesDayZeroWithoutNullClubsDictionary.TryGetValue(new { inv.Sku, inv.Clubs }, out var perClubSalesDayZero);
@@ -725,15 +727,15 @@ namespace ads.Repository
                             {
                                 adsOut.Sales -= perClubSalesDayZero;
                                 adsOut.Divisor--;
-                                adsOut.EndDate = endDateInStringNew;
                             }
 
                             if (perClubInvDayZero == 0 && perClubSalesDayZero > 0)
                             {
                                 adsOut.Sales -= perClubSalesDayZero;
                                 adsOut.Divisor--;
-                                adsOut.EndDate = endDateInStringNew;
                             }
+
+                            adsOut.EndDate = endDateInStringNew;
                         }
                     }
 
@@ -741,16 +743,18 @@ namespace ads.Repository
                     {
                         if (inv.Inventory > 0)
                         {
+                            if (adsOut.Divisor != 56) adsOut.Divisor++;
+
                             adsOut.Sales += perClubSalesToday;
-                            adsOut.Divisor++;
                             adsOut.Ads = adsOut.Divisor != 0 ? Math.Round(adsOut.Sales / adsOut.Divisor, 2) : 0;
                         }
 
                         if (inv.Inventory == 0 && perClubSalesToday > 0)
                         {
+                            if (adsOut.Divisor != 56) adsOut.Divisor++;
+
                             adsOut.Sales += perClubSalesToday;
-                            adsOut.Divisor++;
-                            adsOut.Ads = adsOut.Divisor != 0 ?  Math.Round(adsOut.Sales / adsOut.Divisor, 2) : 0;
+                            adsOut.Ads = adsOut.Divisor != 0 ? Math.Round(adsOut.Sales / adsOut.Divisor, 2) : 0;
                         }
                     }
 
