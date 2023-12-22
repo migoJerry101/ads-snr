@@ -28,5 +28,20 @@ namespace ads.Repository
 
             return dictionary;
         }
+
+        public async Task<Dictionary<int, int>> GetClubsDictionaryByDate(DateTime date)
+        {
+            try
+            {
+               var clubs = await _contex.Clubs.Where(x => x.StartDate < date).DistinctBy(y => y.Number).ToDictionaryAsync(y => y.Number, z => z.Number);
+     
+                return clubs;
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
     }
 }

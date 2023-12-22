@@ -6,5 +6,6 @@ namespace ads.Interface
     {
         Task<List<Club>> GetAllClubs();
         Task<Dictionary<int, DateTime>> GetClubsDictionary();
+        Task<Dictionary<int, int>> GetClubsDictionaryByDate(DateTime date);
     }
 }

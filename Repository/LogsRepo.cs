@@ -9,7 +9,6 @@ namespace ads.Repository
 {
     public class LogsRepo : ILogs
     {
-
         public List<Logging> SelectLastLogs()
         {
             List<Logging> logs = new List<Logging>();

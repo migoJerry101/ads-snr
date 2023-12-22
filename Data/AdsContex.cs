@@ -15,6 +15,10 @@ namespace ads.Data
         public DbSet<TotalAdsClub> TotalAdsClubs { get; set;}
         public DbSet<Club> Clubs { get; set; }
         public DbSet<Item> Items { get; set; }
+        public DbSet<TagClub> TagClubs { get; set; }
+        public DbSet<TagChain> TagChains { get; set; }
+        public DbSet<Logging> Logs { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -24,6 +28,9 @@ namespace ads.Data
             modelBuilder.Entity<TotalAdsClub>().ToTable("tbl_totaladsperclubs");
             modelBuilder.Entity<Club>().ToTable("tbl_Clubs");
             modelBuilder.Entity<Item>().ToTable("tbl_Items");
+            modelBuilder.Entity<TagClub>().ToTable("tbl_TagClubs");
+            modelBuilder.Entity<TagClub>().ToTable("tbl_TagChains");
+            modelBuilder.Entity<Logging>().ToTable("tbl_logs");
         }
     }
 }
