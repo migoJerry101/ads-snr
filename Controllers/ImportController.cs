@@ -162,7 +162,7 @@ namespace ads.Controllers
 
                     var inventories = await _inventory.GetEFInventoriesByDate(dateFormat);
                     var invetiriesInDate = inventories
-                        .Where(x => itemsDictionary.TryGetValue(x.Sku, out var greneralDto))
+                        .Where(x => itemsDictionary.TryGetValue(x.Sku, out var generalDto))
                         .Select(y => new GeneralModel()
                         {
                             INUMBR2 = y.Sku,
@@ -219,11 +219,11 @@ namespace ads.Controllers
                     var updatedSales = _sales.GetAdjustedSalesValue(sales, uniqueSales);
 
                     //updates inventory using Updated sales
-                    await _inventory.BatchUpdateInventoryBysales(updatedSales);
+                    await _inventory.BatchUpdateInventoryBySales(updatedSales);
 
                     var inventories = await _inventory.GetEFInventoriesByDate(dateFormat);
-                    var invetiriesInDate = inventories
-                        .Where(x => itemsDictionary.TryGetValue(x.Sku, out var greneralDto))
+                    var inventoriesInDate = inventories
+                        .Where(x => itemsDictionary.TryGetValue(x.Sku, out var _))
                         .Select(y => new GeneralModel()
                         {
                             INUMBR2 = y.Sku,
@@ -232,7 +232,7 @@ namespace ads.Controllers
                         }).ToList();
 
                     _sales.DeleteSalesByDate(dateFormat);
-                    await _sales.GetSalesAsync(date, date, itemsSku, listOfSales, invetiriesInDate);
+                    await _sales.GetSalesAsync(date, date, itemsSku, listOfSales, inventoriesInDate);
                 }
             }
 
@@ -406,7 +406,7 @@ namespace ads.Controllers
             var dateYWithZeroTime = new DateTime(dateYesterday.Year, dateYesterday.Month, dateYesterday.Day, 0, 0, 0, 0);
 
             var inventoryToday = await _inventory.GetInventoriesByDate(dateYWithZeroTime);
-            var testInv = _inventory.GetDictionayOfPerClubhlInventory(inventoryToday);
+            var testInv = _inventory.GetDictionaryOfPerClubInventory(inventoryToday);
 
             using (OledbCon db = new OledbCon())
             {

@@ -34,6 +34,9 @@ namespace ads.Repository
 
         public async Task BatchCreateTagChainsByDateAsync(DateTime date)
         {
+            var log = new List<Logging>();
+            var startLogs = DateTime.Now;
+
             try
             {
                 var tags = new List<TagChain>();
@@ -44,7 +47,7 @@ namespace ads.Repository
 
                 //grou by sku
                 var salesDictionary = _sales.GetDictionayOfTotalSales(sales);
-                var inventoryDictionary = _inventory.GetDictionayOfTotalInventory(inventories);
+                var inventoryDictionary = _inventory.GetDictionaryOfTotalInventory(inventories);
                 var sku = await _item.GetAllItemSku();
 
                 foreach (var item in sku)
@@ -53,38 +56,53 @@ namespace ads.Repository
                     {
                         Sku = item,
                         Date = date,
-                        Pbi = false,
-                        Ads = false
+                        IsPbiDivisor = false,
+                        IsAdsDivisor = false,
+                        IsOutofStocksWithOutSale = false
                     };
 
                     var hasSale = salesDictionary.TryGetValue(item, out var totalSales);
                     var hasInv = inventoryDictionary.TryGetValue(item, out var totalInventory);
 
+                    if((hasSale && totalSales == 0) && (hasInv && totalInventory ==0)) tag.IsOutofStocksWithOutSale = true;
+
                     if (hasSale) 
                     {
-                        tag.Pbi = true;
+                        tag.IsPbiDivisor = true;
                     }
 
                     if (totalInventory > 0)
                     {
-                        tag.Ads = true;
+                        tag.IsAdsDivisor = true;
                     }
 
                     if (totalInventory == 0 && totalSales > 0)
                     {
-                        tag.Ads = true;
+                        tag.IsAdsDivisor = true;
                     }
 
                     tags.Add(tag);
+
+                    await SaveTagChains(tags, date);
                 }
             }
-            catch (Exception)
+            catch (Exception error)
             {
+
+                var endLogs = DateTime.Now;
+                log.Add(new Logging
+                {
+                    StartLog = startLogs,
+                    EndLog = endLogs,
+                    Action = "Tags for Ads Chain",
+                    Message = $"Error: {error.Message}",
+                    Record_Date = date.Date
+                });
+
+                _logger.InsertLogs(log);
 
                 throw;
             }
-
-            throw new NotImplementedException();
         }
 
         private async Task SaveTagChains(List<TagChain> tags, DateTime date)
@@ -190,7 +208,6 @@ namespace ads.Repository
 
                 throw;
             }
-            throw new NotImplementedException();
         }
     }
 }

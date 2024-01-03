@@ -52,25 +52,26 @@ namespace ads.Repository
                         Sku = sale.Sku,
                         Club = sale.Clubs,
                         Date = date.Date,
-                        Pbi = false,
-                        Ads = false
+                        IsPbiDivisor = false,
+                        IsAdsDivisor = false,
+                        IsOutofStocksWithOutSale = false
                     };
 
                     var hasInventory = inventoryDictionary.TryGetValue(new { sale.Sku, sale.Clubs }, out var invOut);
 
                     if (sale.Sales > 0)
                     {
-                        tag.Pbi = true;
+                        tag.IsPbiDivisor = true;
                     }
 
                     if (invOut > 0)
                     {
-                       tag.Ads = true;
+                       tag.IsAdsDivisor = true;
                     }
 
                     if (invOut == 0 && sale.Sales > 0)
                     {
-                        tag.Ads = true;
+                        tag.IsAdsDivisor = true;
                     }
 
                     tags.Add(tag);
@@ -127,8 +128,8 @@ namespace ads.Repository
                                 row["Sku"] = tag.Sku;
                                 row["Club"] = tag.Club;
                                 row["Date"] = tag.Date;
-                                row["Ads"] = tag.Ads;
-                                row["Pbi"] = tag.Ads;
+                                row["Ads"] = tag.IsAdsDivisor;
+                                row["Pbi"] = tag.IsAdsDivisor;
 
                                 dataTable.Rows.Add(row);
                             }

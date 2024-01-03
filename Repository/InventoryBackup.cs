@@ -52,7 +52,7 @@ namespace ads.Repository
             }
 
             var inventoryToday = await _invetory.GetInventoriesByDate(dateYWithZeroTime);
-            var testInv = _invetory.GetDictionayOfPerClubhlInventory(inventoryToday);
+            var testInv = _invetory.GetDictionaryOfPerClubInventory(inventoryToday);
 
             listTtotal = new List<GeneralModel>();
 

@@ -11,10 +11,10 @@ namespace ads.Interface
         string TotalInventory(string startDate, string endDate);
         Task<int> CountInventory(string dateListString, OledbCon db);
         Task<List<Inv>> GetInventoriesByDate(DateTime date);
-        Dictionary<string, decimal> GetDictionayOfTotalInventory(List<Inv> inventories);
-        Dictionary<string, decimal> GetDictionayOfPerClubhlInventory(List<Inv> inventories);
+        Dictionary<string, decimal> GetDictionaryOfTotalInventory(List<Inv> inventories);
+        Dictionary<string, decimal> GetDictionaryOfPerClubInventory(List<Inv> inventories);
         Task<List<Inv>> GetEFInventoriesByDate(DateTime date);
-        Task BatchUpdateInventoryBysales(List<Sale> updatedSales);
+        Task BatchUpdateInventoryBySales(List<Sale> updatedSales);
         Task<List<Inv>> GetInventoriesByDateEf(DateTime date);
     }
 }

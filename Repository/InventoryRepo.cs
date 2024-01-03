@@ -298,7 +298,8 @@ namespace ads.Repository
         //Total Inventory
         public string TotalInventory(string startDate, string endDate)
         {
-            string totalsales = "";
+            string totalSales = "";
+
             using (MsSqlCon db = new MsSqlCon())
             {
                 string oledb = "Select Count(*) Total from tbl_inv where Date between @StartDate and @EndDate";
@@ -312,13 +313,13 @@ namespace ads.Repository
                     {
                         if (reader.Read())
                         {
-                            totalsales += reader["Total"].ToString();
+                            totalSales += reader["Total"].ToString();
                         }
                     }
                 }
             }
 
-            return totalsales;
+            return totalSales;
         }
 
         //TotalCount of Sales
@@ -380,7 +381,7 @@ namespace ads.Repository
             return _inventoryList;
         }
 
-        public Dictionary<string, decimal> GetDictionayOfTotalInventory(List<Inv> inventories)
+        public Dictionary<string, decimal> GetDictionaryOfTotalInventory(List<Inv> inventories)
         {
             var inventoryDictionary = inventories.GroupBy(x => x.Sku).ToDictionary(
                 group => group.Key,
@@ -390,7 +391,7 @@ namespace ads.Repository
             return inventoryDictionary;
         }
 
-        public Dictionary<string, decimal> GetDictionayOfPerClubhlInventory(List<Inv> inventories)
+        public Dictionary<string, decimal> GetDictionaryOfPerClubInventory(List<Inv> inventories)
         {
             var inventoryDictionary = inventories.GroupBy(x => $"{x.Sku}{x.Clubs}").ToDictionary(
                 group => group.Key,
@@ -407,7 +408,7 @@ namespace ads.Repository
             return inventories;
         }
 
-        public async Task BatchUpdateInventoryBysales(List<Sale> updatedSales)
+        public async Task BatchUpdateInventoryBySales(List<Sale> updatedSales)
         {
             var startLog = DateTime.Now;
 
