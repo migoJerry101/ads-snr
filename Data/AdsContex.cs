@@ -18,6 +18,8 @@ namespace ads.Data
         public DbSet<TagClub> TagClubs { get; set; }
         public DbSet<TagChain> TagChains { get; set; }
         public DbSet<Logging> Logs { get; set; }
+        public DbSet<PowerBiAdsChain> PowerBiAdsChains { get; set; }
+        public DbSet<PowerBiAdsClub> PowerBiAdsClubs { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -28,9 +30,11 @@ namespace ads.Data
             modelBuilder.Entity<TotalAdsClub>().ToTable("tbl_totaladsperclubs");
             modelBuilder.Entity<Club>().ToTable("tbl_Clubs");
             modelBuilder.Entity<Item>().ToTable("tbl_Items");
-            modelBuilder.Entity<TagClub>().ToTable("tbl_TagClubs");
-            modelBuilder.Entity<TagClub>().ToTable("tbl_TagChains");
+            modelBuilder.Entity<TagClub>().ToTable("tbl_tagClubs");
+            modelBuilder.Entity<TagClub>().ToTable("tbl_tagChains");
             modelBuilder.Entity<Logging>().ToTable("tbl_logs");
+            modelBuilder.Entity<PowerBiAdsChain>().ToTable("tbl_powerBiAdsChains");
+            modelBuilder.Entity<PowerBiAdsClub>().ToTable("tbl_powerBiAdsClubs");
         }
     }
 }

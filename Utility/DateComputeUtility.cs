@@ -45,5 +45,12 @@ namespace ads.Utility
 
             return differenceOut.Days;
         }
+
+        public static int GetDifferenceInRange(DateTime startDate, DateTime endDate)
+        {
+            TimeSpan differenceOut = startDate.AddDays(1) - endDate;
+
+            return differenceOut.Days;
+        }
     }
 }

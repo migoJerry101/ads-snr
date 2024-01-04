@@ -1,9 +1,11 @@
-﻿namespace ads.Interface
+﻿using ads.Models.Data;
+
+namespace ads.Interface
 {
     public interface IPowerBiAdsChain
     {
-        Task SavePowerBiChainAsync(List<IPowerBiAdsChain> ads, DateTime date);
+        Task SavePowerBiChainAsync(List<PowerBiAdsChain> ads, DateTime date);
         //get ads by date - list ads
-        //get ads by date and sku - single ads
+        Task<List<PowerBiAdsChain>> GetPowerBiAdsChainsByDateAsync(DateTime date);
     }
 }
