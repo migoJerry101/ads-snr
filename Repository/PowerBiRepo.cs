@@ -157,7 +157,9 @@ namespace ads.Repository
                     }
                 }
 
-                //save new Ads
+                //save new Ads chain
+                await _powerBiAdsChain.SavePowerBiChainAsync(adsWithCurrentSales, date);
+
                 var adsPerClubs = await _powerBiAdsClub.GetPowerBiAdsClubByDateAsync(currentDate);
                 var totalAdsClubDictionary = adsPerClubs.ToDictionary(x => new { x.Sku, x.Clubs });
 
@@ -167,46 +169,61 @@ namespace ads.Repository
 
                 var inventoryDayZeroWithoutNullClubsDictionary = inventoryDayZeroWithoutNullClubs.ToDictionary(x => new { x.Sku, x.Clubs }, y => y.Inventory);
 
+                var adsPerClubsWithCurrentSales = new List<PowerBiAdsClub>();
+
                 foreach (var sale in salesTodayWithoutNullClubs)
                 {
-                    var hasAds = totalAdsClubDictionary.TryGetValue(new { sale.Sku, sale.Clubs }, out var adsOut);
                     inventoryDayZeroWithoutNullClubsDictionary.TryGetValue(new { sale.Sku, sale.Clubs }, out var perClubInvDayZero);
                     salesDayZeroWithoutNullClubsDictionary.TryGetValue(new { sale.Sku, sale.Clubs }, out var perClubSalesDatZero);
 
-                    if (hasAds)
+                    if (totalAdsClubDictionary.TryGetValue(new { sale.Sku, sale.Clubs }, out var adsOut))
                     {
-                        var daysDifferenceOut = DateComputeUtility.GetDifferenceInRange(adsOut.StartDate, adsOut.EndDate);
                         adsOut.StartDate = currentDate;
-                        if (sale.Sales == 0 && perClubInvDayZero == 0) adsOut.OutOfStockDaysCount += 1;
 
-                        if (adsOut.Divisor == 56)//checked
+                        var daysDifferenceOut = DateComputeUtility.GetDifferenceInRange(adsOut.StartDate, adsOut.EndDate);
+                        var hasOutOfStockDays = sale.Sales == 0 && perClubInvDayZero == 0;
+                        if (hasOutOfStockDays) adsOut.OutOfStockDaysCount += 1;
+
+                        if (adsOut.Divisor == 56 && !hasOutOfStockDays)
                         {
-                            //subtraction of day zero sale from total
                             var newEndDate = adsDayZeor.AddDays(1);
                             adsOut.EndDate = newEndDate;
                             adsOut.Sales -= perClubSalesDatZero;
-
-
                         }
                         else
                         {
                             //add sales today and recalculate ads
                             //check if out of stock daycount
 
-                            if (sale.Sales > 0)
+                            if (sale.Sales > 0 && !hasOutOfStockDays)
                             {
                                 adsOut.Divisor++;
                                 adsOut.OutOfStockDaysCount = 0;
                                 adsOut.Sales += sale.Sales;
                                 adsOut.Ads = adsOut.Sales != 0 ? Math.Round(adsOut.Sales / 1, 2) : adsOut.Ads;
                             }
-
-
-
                         }
+
+                        adsPerClubsWithCurrentSales.Add(adsOut);
+                    }
+                    else
+                    {
+                        var newAds = new PowerBiAdsClub()
+                        {
+                            Divisor = 0,
+                            Sales = 0,
+                            Ads = 0,
+                            Sku = sale.Sku,
+                            StartDate = currentDate,
+                            EndDate = currentDate,
+                            OutOfStockDaysCount = 0
+                        };
+
+                        adsPerClubsWithCurrentSales.Add(newAds);
                     }
                 }
 
+                await _powerBiAdsClub.SavePowerBiClubAsync(adsPerClubsWithCurrentSales, date);
             }
             catch (Exception error)
             {
@@ -222,8 +239,6 @@ namespace ads.Repository
                 });
 
                 _logger.InsertLogs(log);
-
-                throw;
             }
         }
     }

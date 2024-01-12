@@ -23,7 +23,7 @@ builder.Services.AddScoped<IClub, ClubRepo>();
 builder.Services.AddScoped<IItem, ItemRepo>();
 builder.Services.AddScoped<IInventoryBackup, InventoryBackup>();
 
-//Quartz run for cronjob
+//Jobs For Ads Replenishment
 builder.Services.AddQuartz(q =>
 {
     q.UseMicrosoftDependencyInjectionJobFactory();
@@ -36,6 +36,19 @@ builder.Services.AddQuartz(q =>
         //.WithCronSchedule("50 38 16 * * ?"));`
         ////Actual Record of Final Records
         .WithCronSchedule("01 00 06 * * ?"));
+});
+
+//Jobs For Ads PowerBi
+builder.Services.AddQuartz(q =>
+{
+    q.UseMicrosoftDependencyInjectionJobFactory();
+    var jobKey = new JobKey("PowerBiJobs");
+    q.AddJob<CronJobsAdsPowerBiRepo>(opts => opts.WithIdentity(jobKey));
+
+    q.AddTrigger(opts => opts
+        .ForJob(jobKey)
+        .WithIdentity("PowerBiJobs-trigger")
+        .WithCronSchedule("00 00 8 * * ?"));
 });
 
 
