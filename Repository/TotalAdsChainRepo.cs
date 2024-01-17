@@ -29,7 +29,10 @@ namespace ads.Repository
 
         public async Task<List<TotalAdsChain>> GetTotalAdsChainByDate(string date)
         {
-            var ads = await _context.TotalAdsChains.Where(x => x.StartDate == date).ToListAsync();
+            var ads = await _context.TotalAdsChains
+                .Where(x => x.StartDate == date)
+                .OrderBy(y => y.EndDate)
+                .ToListAsync();
 
             return ads;
         }

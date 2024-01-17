@@ -533,12 +533,8 @@ namespace ads.Repository
 
             //get one sample from ads chain then get start and end date
             var adsDayZeor = adsChain.Count > 0 ? adsChain[0].EndDate : $"{CurrentDateWithZeroTime:yyyy-MM-dd HH:mm:ss.fff}";
-            var startDate = adsChain.Count > 0 ? adsChain[0].EndDate : $"{CurrentDateWithZeroTime:yyyy-MM-dd HH:mm:ss.fff}";
             string format = "yyyy-MM-dd HH:mm:ss.fff";
-            DateTime.TryParseExact(startDate, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime startDateOut);
             DateTime.TryParseExact(adsDayZeor, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime endDateOut);
-            TimeSpan difference = startDateOut - endDateOut;
-            var daysDifference = difference.Days;
 
             //sales for chain
             var SalesToday = await _sales.GetSalesByDateEf(CurrentDateWithZeroTime); //to add
