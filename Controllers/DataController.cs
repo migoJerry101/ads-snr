@@ -30,7 +30,5 @@ namespace ads.Controllers
             var transformedData = await _data.GetInventoryAsync(start, end);
             return Ok(transformedData);
         }
-
-       
     }
 }

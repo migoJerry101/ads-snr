@@ -17,16 +17,18 @@ namespace ads.Repository
         private readonly ILogs _logs;
         private readonly AdsContex _adsContex;
         private readonly IItem _item;
+        private readonly IClub _club;
 
         //private readonly DateConvertion dateConvertion = new DateConvertion();
         public List<Inv> _inventoryList = new List<Inv>();
 
-        public InventoryRepo(IOpenQuery openQuery, ILogs logs, AdsContex adsContex, IItem item)
+        public InventoryRepo(IOpenQuery openQuery, ILogs logs, AdsContex adsContex, IItem item, IClub club)
         {
             _logs = logs;
             _openQuery = openQuery;
             _adsContex = adsContex;
             _item = item;
+            _club = club;
         }
 
         //Get Inventory
@@ -348,6 +350,16 @@ namespace ads.Repository
             var inventories = await _adsContex.Inventories.Where(x => x.Date == date).ToListAsync();
 
             return inventories;
+        }
+
+        public async Task<List<Inv>> GetInventoriesByDateAndClubs(DateTime date)
+        {
+            var clubs = await _club.GetAllClubs();
+            var clubCode = clubs.Select(x => x.Number.ToString()).ToList();
+            var inventories = await _adsContex.Inventories.Where(x => x.Date == date).ToListAsync();
+            var filterdInventories = inventories.Where(x => x.Clubs.IsNullOrEmpty() || clubCode.Contains(x.Clubs)).ToList();
+
+            return filterdInventories;
         }
 
         public async Task<List<Inv>> GetInventoriesByDate(DateTime date)

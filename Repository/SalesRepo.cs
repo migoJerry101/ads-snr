@@ -8,6 +8,7 @@ using DocumentFormat.OpenXml.InkML;
 using DocumentFormat.OpenXml.Wordprocessing;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
@@ -23,17 +24,19 @@ namespace ads.Repository
         private readonly AdsContex _adsContex;
         private readonly IItem _item;
         private readonly IConfiguration _configuration;
+        private readonly IClub _club;
 
         //private readonly DateConvertion dateConvertion = new DateConvertion();
         private List<Sale> _saleList = new List<Sale>();
 
-        public SalesRepo(IOpenQuery openQuery, ILogs logs, AdsContex adsContex, IItem item, IConfiguration configuration)
+        public SalesRepo(IOpenQuery openQuery, ILogs logs, AdsContex adsContex, IItem item, IConfiguration configuration, IClub club)
         {
             _openQuery = openQuery;
             _logs = logs;
             _adsContex = adsContex;
             _item = item;
             _configuration = configuration;
+            _club = club;
         }
 
         private List<Sale> GenerateListOfDataRows(List<GeneralModel> datas, string sku, bool hasSales, bool useStartDate, string? date)
@@ -395,6 +398,16 @@ namespace ads.Repository
             var sales = await _adsContex.Sales.Where(x => x.Date == date).ToListAsync();
 
             return sales;
+        }
+
+        public async Task<List<Sale>> GetSalesByDateAndClub(DateTime date)
+        {
+            var clubs = await _club.GetAllClubs();
+            var clubCode = clubs.Select(x => x.Number.ToString()).ToList();
+            var sales = await _adsContex.Sales.Where(x => x.Date == date).ToListAsync();
+            var filteredSales = sales.Where(x => x.Clubs.IsNullOrEmpty() || clubCode.Contains(x.Clubs)).ToList();
+
+            return filteredSales;
         }
 
         public async Task<List<Sale>> GetSalesByDate(DateTime date)
