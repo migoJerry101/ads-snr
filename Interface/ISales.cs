@@ -16,5 +16,6 @@ namespace ads.Interface
         List<Sale> GetAdjustedSalesValue(List<Sale> sales, IEnumerable<Sale> reImportedSales);
         Task<List<Sale>> GetSalesByDateEf(DateTime date);
         void DeleteSalesByDate(DateTime date);
+        Task<List<Sale>> GetSalesByDateAndClub(DateTime date);
     }
 }

@@ -537,16 +537,16 @@ namespace ads.Repository
             DateTime.TryParseExact(adsDayZeor, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime endDateOut);
 
             //sales for chain
-            var SalesToday = await _sales.GetSalesByDateEf(CurrentDateWithZeroTime); //to add
-            var salesDayZero = await _sales.GetSalesByDateEf(endDateOut); // to subtract
+            var SalesToday = await _sales.GetSalesByDateAndClub(CurrentDateWithZeroTime); //to add
+            var salesDayZero = await _sales.GetSalesByDateAndClub(endDateOut); // to subtract
 
             //sales for clubs
             var salesTodayWithoutNullClubs = SalesToday.Where(i => !i.Clubs.IsNullOrEmpty());
             var salesDayZeroWithoutNullClubs = salesDayZero.Where(i => !i.Clubs.IsNullOrEmpty());
 
             //getInventory today and dayzero
-            var inventoryToday = await _invetory.GetInventoriesByDateEf(CurrentDateWithZeroTime);
-            var inventoryDayZero = await _invetory.GetInventoriesByDateEf(endDateOut);
+            var inventoryToday = await _invetory.GetInventoriesByDateAndClubs(CurrentDateWithZeroTime);
+            var inventoryDayZero = await _invetory.GetInventoriesByDateAndClubs(endDateOut);
 
             var inventoryDayZeroWithoutNullClubs = inventoryDayZero.Where(i => !i.Clubs.IsNullOrEmpty());
             var inventoryTodayWithoutNullClubs = inventoryToday.Where(c => !c.Clubs.IsNullOrEmpty());
@@ -704,8 +704,9 @@ namespace ads.Repository
             {
                 var hasAds = totalAdsClubDictionary.TryGetValue(new { inv.Sku, inv.Clubs }, out var adsOut);
                 salesTodayWithoutNullClubsDictionary.TryGetValue(new { inv.Sku, inv.Clubs }, out var perClubSalesToday);
+                var isAclub = clubsDictionary.TryGetValue(Convert.ToInt32(inv.Clubs), out var StartDate);
 
-                if (hasAds)
+                if (hasAds & isAclub)
                 {
                     var daysDifferenceOut = DateComputeUtility.GetDifferenceInRange(adsOut.StartDate, adsOut.EndDate);
 
@@ -760,7 +761,6 @@ namespace ads.Repository
                 else
                 {
                     var currentDateCheck = DateTime.Now;
-                    clubsDictionary.TryGetValue(Convert.ToInt32(inv.Clubs), out var StartDate);
 
                     if (perClubSalesToday >= 0)
                     {
@@ -803,7 +803,10 @@ namespace ads.Repository
                             EndDate = startDateInString
                         };
 
-                        adsPerClubsWithCurrentsales.Add(newAds);
+                        if (currentDateCheck > StartDate)
+                        {
+                            adsPerClubsWithCurrentsales.Add(newAds);
+                        }
                     }
                 }
             }
