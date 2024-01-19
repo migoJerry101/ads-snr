@@ -1,4 +1,4 @@
-﻿namespace ads.Models.Dto
+﻿namespace ads.Models.Dto.AdsChain
 {
     public class TotalAdsChainPaginationDto
     {

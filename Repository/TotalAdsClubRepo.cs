@@ -1,11 +1,13 @@
 ﻿using ads.Data;
 using ads.Interface;
 using ads.Models.Data;
-using ads.Models.Dto;
 using Microsoft.EntityFrameworkCore;
 using static System.Reflection.Metadata.BlobBuilder;
 using System.Data;
 using System.Data.SqlClient;
+using ads.Models.Dto.AdsChain;
+using ads.Models.Dto.AdsClub;
+using DocumentFormat.OpenXml.InkML;
 
 namespace ads.Repository
 {
@@ -14,12 +16,21 @@ namespace ads.Repository
         private readonly AdsContex _context;
         private readonly ILogs _logs;
         private readonly IConfiguration _configuration;
+        private readonly ISales _sales;
+        private readonly IInventory _inventory;
 
-        public TotalAdsClubRepo(AdsContex context, ILogs logs, IConfiguration configuration)
+        public TotalAdsClubRepo(
+            AdsContex context,
+            ILogs logs,
+            IConfiguration configuration,
+            ISales sales,
+            IInventory inventory)
         {
             _context = context;
             _logs = logs;
             _configuration = configuration;
+            _sales = sales;
+            _inventory = inventory;
         }
 
         public async Task<(List<TotalAdsClub>, int totalPages)> GetPaginatedTotalAdsClubs(TotalAdsChainPaginationDto data)
@@ -42,7 +53,7 @@ namespace ads.Repository
 
         public async Task<List<TotalAdsClub>> GetTotalAdsClubsByDate(string date)
         {
-            var ads = await _context.TotalAdsClubs.Where(x=> x.StartDate == date).ToListAsync();
+            var ads = await _context.TotalAdsClubs.Where(x => x.StartDate == date).ToListAsync();
 
             return ads;
         }
@@ -88,6 +99,71 @@ namespace ads.Repository
                 });
 
                 _logs.InsertLogs(Log);
+            }
+        }
+
+        public async Task<IEnumerable<IGrouping<DateTime, AdsClubReportDto>>> GenerateAdsClubsReportDto(DateTime startDate, DateTime endDate)
+        {
+            var adsClubReportDtos = new List<AdsClubReportDto>();
+            DateTime startLogs = DateTime.Now;
+            List<Logging> log = new List<Logging>();
+
+            try
+            {
+                for (DateTime currentDate = startDate; currentDate <= endDate; currentDate = currentDate.AddDays(1))
+                {
+                    var sales = await _sales.GetSalesByDateAndClub(currentDate);
+                    var salesDictionary = sales
+                        .GroupBy(x => (x.Sku, x.Clubs))
+                        .ToDictionary(group => group.Key, group => group.Sum(y => y.Sales));
+
+                    var inventories = await _inventory.GetInventoriesByDateAndClubs(currentDate);
+                    var inventoriesDictionary = inventories.ToDictionary(x => (x.Sku, x.Clubs), y => y.Inventory);
+
+                    var adsClubs = await _context.TotalAdsClubs
+                        .Where(x => x.StartDate == currentDate.Date.ToString())
+                        .Select(y =>
+                           new AdsClubReportDto
+                           {
+                               Divisor = y.Divisor,
+                               Ads = y.Divisor,
+                               Date = currentDate,
+                               Clubs = y.Clubs,
+                               Sku = y.Sku
+                           })
+                        .ToListAsync();
+
+                    foreach (var adsItem in adsClubs)
+                    {
+                        salesDictionary.TryGetValue((adsItem.Sku, adsItem.Clubs), out var salesToday);
+                        inventoriesDictionary.TryGetValue((adsItem.Sku, adsItem.Clubs), out var InventoryToday);
+
+                        adsItem.Sales = salesToday;
+                        adsItem.OnHand = InventoryToday;
+                    }
+
+                    adsClubReportDtos.AddRange(adsClubs);
+                }
+
+                var groupBy = adsClubReportDtos.GroupBy(x => x.Date);
+
+                return groupBy;
+            }
+            catch (Exception error)
+            {
+                DateTime endLogs = DateTime.Now;
+
+                log.Add(new Logging
+                {
+                    StartLog = startLogs,
+                    EndLog = endLogs,
+                    Action = "Error",
+                    Message = "Delete Ads Clubs : " + error.Message + " ",
+                    Record_Date = endLogs.Date
+                });
+
+                _logs.InsertLogs(log);
+                throw;
             }
         }
     }

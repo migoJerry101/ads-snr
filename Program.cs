@@ -22,6 +22,7 @@ builder.Services.AddScoped<ITotalAdsClub, TotalAdsClubRepo>();
 builder.Services.AddScoped<IClub, ClubRepo>();
 builder.Services.AddScoped<IItem, ItemRepo>();
 builder.Services.AddScoped<IInventoryBackup, InventoryBackup>();
+builder.Services.AddScoped<IExcel, ExcelRepo>();
 
 //Quartz run for cronjob
 builder.Services.AddQuartz(q =>
