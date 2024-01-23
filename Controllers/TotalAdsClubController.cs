@@ -1,5 +1,5 @@
 ﻿using ads.Interface;
-using ads.Models.Dto;
+using ads.Models.Dto.AdsChain;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,11 +12,13 @@ namespace ads.Controllers
     {
         private readonly ITotalAdsClub _totalAdsClub;
         private readonly IClub _club;
+        private readonly IExcel _excel;
 
-        public TotalAdsClubController(ITotalAdsClub totalAdsClub, IClub club)
+        public TotalAdsClubController(ITotalAdsClub totalAdsClub, IClub club, IExcel excel)
         {
             _totalAdsClub = totalAdsClub;
             _club = club;
+            _excel = excel;
         }
 
         [HttpPost]
@@ -35,12 +37,16 @@ namespace ads.Controllers
         }
 
         [HttpPost]
-        [Route("GetClubs")]
-        public async Task<ActionResult> GetClubs()
+        [Route("GenerateAdsClubsReportDto")]
+        public async Task<ActionResult> GenerateAdsClubsReportDto(DateTime startDate, DateTime endDate)
         {
-            var ads = await _club.GetAllClubs();
+            var reportDtos = await _totalAdsClub.GenerateAdsClubsReportDto(startDate, endDate);
 
-            return Ok(ads);
+            var report = _excel.ExportDataToExcelByDate(reportDtos);
+
+            var file = File(report, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "AdsReport.xlsx");
+
+            return file;
         }
     }
 }

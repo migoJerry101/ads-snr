@@ -5,6 +5,8 @@ using Microsoft.EntityFrameworkCore;
 using static System.Reflection.Metadata.BlobBuilder;
 using System.Data;
 using System.Data.SqlClient;
+using ads.Models.Dto.AdsChain;
+using ads.Models.Dto.AdsClub;
 
 namespace ads.Repository
 {
@@ -13,12 +15,16 @@ namespace ads.Repository
         private readonly AdsContex _context;
         private readonly ILogs _logs;
         private readonly IConfiguration _configuration;
+        private readonly ISales _sales;
+        private readonly IInventory _inventory;
 
-        public TotalAdsChainRepo(AdsContex context, ILogs logs, IConfiguration configuration)
+        public TotalAdsChainRepo(AdsContex context, ILogs logs, IConfiguration configuration, ISales sales, IInventory inventory)
         {
             _context = context;
             _logs = logs;
             _configuration = configuration;
+            _sales = sales;
+            _inventory = inventory;
         }
         public TotalAdsChain GetTotalAdsChain()
         {
@@ -78,6 +84,68 @@ namespace ads.Repository
                 });
 
                 _logs.InsertLogs(Log);
+            }
+        }
+
+        public async Task<IEnumerable<IGrouping<string, AdsChainReportDto>>> GenerateAdsChainReportDto(DateTime startDate, DateTime endDate)
+        {
+            var adsChainReportDtos = new List<AdsChainReportDto>();
+            var startLogs = DateTime.Now;
+            var log = new List<Logging>();
+
+            try
+            {
+                for (DateTime currentDate = endDate; startDate >= currentDate; currentDate = currentDate.AddDays(1))
+                {
+                    var sales = await _sales.GetSalesByDateAndClub(currentDate);
+                    var salesDictionary = _sales.GetDictionayOfTotalSales(sales);
+
+                    var inventories = await _inventory.GetInventoriesByDateAndClubs(currentDate);
+                    var inventoriesDictionary = _inventory.GetDictionayOfTotalInventory(inventories);
+
+                    var adsChain = await _context.TotalAdsChains
+                        .Where(x => x.StartDate == $"{currentDate:yyyy-MM-dd HH:mm:ss.fff}")
+                        .OrderBy(z => z.Sku)
+                        .Select(y =>
+                           new AdsChainReportDto
+                           {
+                               Divisor = y.Divisor,
+                               Ads = y.Ads,
+                               Date = currentDate.ToString("M/d/yyyy"),
+                               Sku = y.Sku
+                           })
+                        .ToListAsync();
+
+                    foreach (var adsItem in adsChain)
+                    {
+                        salesDictionary.TryGetValue((adsItem.Sku), out var salesToday);
+                        inventoriesDictionary.TryGetValue((adsItem.Sku), out var InventoryToday);
+
+                        adsItem.Sales = salesToday;
+                        adsItem.OnHand = InventoryToday;
+                    }
+
+                    adsChainReportDtos.AddRange(adsChain);
+                }
+                var groupedByData = adsChainReportDtos.GroupBy(x => x.Date);
+
+                return groupedByData;
+            }
+            catch (Exception error)
+            {
+                DateTime endLogs = DateTime.Now;
+
+                log.Add(new Logging
+                {
+                    StartLog = startLogs,
+                    EndLog = endLogs,
+                    Action = "Error",
+                    Message = "Delete Ads Clubs : " + error.Message + " ",
+                    Record_Date = endLogs.Date
+                });
+
+                _logs.InsertLogs(log);
+                throw;
             }
         }
     }
