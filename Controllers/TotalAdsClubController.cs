@@ -44,9 +44,9 @@ namespace ads.Controllers
 
             var report = _excel.ExportDataToExcelByDate(reportDtos);
 
-            var file = File(report, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "IFILE.xlsx");
+            var file = File(report, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "AdsReport.xlsx");
 
-            return Ok(file);
+            return file;
         }
     }
 }

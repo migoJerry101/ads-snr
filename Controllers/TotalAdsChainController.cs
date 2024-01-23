@@ -23,16 +23,16 @@ namespace ads.Controllers
             return Ok(chain);
         }
 
-        //[HttpGet]
-        //[Route("GenerateChainReport")]
-        //public IActionResult GenerateChainReport()
-        //{
+        [HttpPost]
+        [Route("GenerateChainReport")]
+        public async Task<IActionResult> GenerateChainReport(DateTime startDate, DateTime endDate)
+        {
+            var reportDtos = await _totalAdsChain.GenerateAdsChainReportDto(startDate, endDate);
+            var report = _excel.ExportDataToExcelByDate(reportDtos);
 
-        //    var report = _excel.ExportDataToExcelByDate();
+            var file = File(report, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "AdsReport.xlsx");
 
-        //    var file = File(report, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "IFILE.xlsx");
-
-        //    return file;
-        //}
+            return file;
+        }
     }
 }

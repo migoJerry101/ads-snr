@@ -102,15 +102,15 @@ namespace ads.Repository
             }
         }
 
-        public async Task<IEnumerable<IGrouping<DateTime, AdsClubReportDto>>> GenerateAdsClubsReportDto(DateTime startDate, DateTime endDate)
+        public async Task<IEnumerable<IGrouping<string, AdsClubReportDto>>> GenerateAdsClubsReportDto(DateTime startDate, DateTime endDate)
         {
             var adsClubReportDtos = new List<AdsClubReportDto>();
-            DateTime startLogs = DateTime.Now;
-            List<Logging> log = new List<Logging>();
+            var startLogs = DateTime.Now;
+            var log = new List<Logging>();
 
             try
             {
-                for (DateTime currentDate = startDate; currentDate <= endDate; currentDate = currentDate.AddDays(1))
+                for (DateTime currentDate = endDate; startDate >= currentDate; currentDate = currentDate.AddDays(1))
                 {
                     var sales = await _sales.GetSalesByDateAndClub(currentDate);
                     var salesDictionary = sales
@@ -121,13 +121,15 @@ namespace ads.Repository
                     var inventoriesDictionary = inventories.ToDictionary(x => (x.Sku, x.Clubs), y => y.Inventory);
 
                     var adsClubs = await _context.TotalAdsClubs
-                        .Where(x => x.StartDate == currentDate.Date.ToString())
+                        .Where(x => x.StartDate == $"{currentDate:yyyy-MM-dd HH:mm:ss.fff}")
+                        .OrderBy(z => z.Clubs)
+                        .OrderBy(a => a.Sku)
                         .Select(y =>
                            new AdsClubReportDto
                            {
                                Divisor = y.Divisor,
                                Ads = y.Divisor,
-                               Date = currentDate,
+                               Date = currentDate.ToString("M/d/yyyy"),
                                Clubs = y.Clubs,
                                Sku = y.Sku
                            })
@@ -151,7 +153,7 @@ namespace ads.Repository
             }
             catch (Exception error)
             {
-                DateTime endLogs = DateTime.Now;
+                var endLogs = DateTime.Now;
 
                 log.Add(new Logging
                 {

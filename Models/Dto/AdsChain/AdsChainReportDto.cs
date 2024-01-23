@@ -1,9 +1,8 @@
-﻿namespace ads.Models.Dto.AdsClub
+﻿namespace ads.Models.Dto.AdsChain
 {
-    public class AdsClubReportDto
+    public class AdsChainReportDto
     {
         public string Sku { get; set; } = string.Empty;
-        public string Clubs { get; set; } = string.Empty;
         public decimal OnHand { get; set; }
         public decimal Sales { get; set; }
         public int Divisor { get; set; }
