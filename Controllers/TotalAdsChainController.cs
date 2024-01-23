@@ -30,7 +30,7 @@ namespace ads.Controllers
             var reportDtos = await _totalAdsChain.GenerateAdsChainReportDto(startDate, endDate);
             var report = _excel.ExportDataToExcelByDate(reportDtos);
 
-            var file = File(report, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "AdsReport.xlsx");
+            var file = File(report, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"AdsChain-{startDate:M/d/yyyy}.xlsx");
 
             return file;
         }
