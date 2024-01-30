@@ -3,9 +3,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ads.Data
 {
-    public class AdsContex : DbContext
+    public class AdsContext : DbContext
     {
-        public AdsContex(DbContextOptions<AdsContex> options) : base(options)
+        public AdsContext(DbContextOptions<AdsContext> options) : base(options)
         {
         }
 
@@ -15,6 +15,7 @@ namespace ads.Data
         public DbSet<TotalAdsClub> TotalAdsClubs { get; set;}
         public DbSet<Club> Clubs { get; set; }
         public DbSet<Item> Items { get; set; }
+        public DbSet<Price> Prices { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -24,6 +25,7 @@ namespace ads.Data
             modelBuilder.Entity<TotalAdsClub>().ToTable("tbl_totaladsperclubs");
             modelBuilder.Entity<Club>().ToTable("tbl_Clubs");
             modelBuilder.Entity<Item>().ToTable("tbl_Items");
+            modelBuilder.Entity<Price>().ToTable("tbl_Prices");
         }
     }
 }

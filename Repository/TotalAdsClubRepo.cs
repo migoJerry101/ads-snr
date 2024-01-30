@@ -13,14 +13,14 @@ namespace ads.Repository
 {
     public class TotalAdsClubRepo : ITotalAdsClub
     {
-        private readonly AdsContex _context;
+        private readonly AdsContext _context;
         private readonly ILogs _logs;
         private readonly IConfiguration _configuration;
         private readonly ISales _sales;
         private readonly IInventory _inventory;
 
         public TotalAdsClubRepo(
-            AdsContex context,
+            AdsContext context,
             ILogs logs,
             IConfiguration configuration,
             ISales sales,

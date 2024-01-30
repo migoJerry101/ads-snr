@@ -8,6 +8,7 @@
     ".NETCoreApp,Version=v6.0": {
       "ads/1.0.0": {
         "dependencies": {
+          "CsvHelper": "30.0.3",
           "Dapper": "2.0.151",
           "DocumentFormat.OpenXml": "2.20.0",
           "EPPlus": "7.0.6",
@@ -55,6 +56,14 @@
           "lib/netstandard2.0/Azure.Identity.dll": {
             "assemblyVersion": "1.10.3.0",
             "fileVersion": "1.1000.323.51804"
+          }
+        }
+      },
+      "CsvHelper/30.0.3": {
+        "runtime": {
+          "lib/net6.0/CsvHelper.dll": {
+            "assemblyVersion": "30.0.0.0",
+            "fileVersion": "30.0.3.9"
           }
         }
       },
@@ -957,6 +966,13 @@
       "sha512": "sha512-l1Xm2MWOF2Mzcwuarlw8kWQXLZk3UeB55aQXVyjj23aBfDwOZ3gu5GP2kJ6KlmZeZv2TCzw7x4L3V36iNr3gww==",
       "path": "azure.identity/1.10.3",
       "hashPath": "azure.identity.1.10.3.nupkg.sha512"
+    },
+    "CsvHelper/30.0.3": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-OK4xEoPKFZYZ2Km+ZTGRxuLo33u+ipKVCC9ICCGn5JRiAmPLRsCPZ/shL3HKGPwS33MQSPcPHigI4HnX3Q47yg==",
+      "path": "csvhelper/30.0.3",
+      "hashPath": "csvhelper.30.0.3.nupkg.sha512"
     },
     "Dapper/2.0.151": {
       "type": "package",

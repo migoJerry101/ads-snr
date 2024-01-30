@@ -15,18 +15,18 @@ namespace ads.Repository
     {
         private readonly IOpenQuery _openQuery;
         private readonly ILogs _logs;
-        private readonly AdsContex _adsContex;
+        private readonly AdsContext _adsContext;
         private readonly IItem _item;
         private readonly IClub _club;
 
         //private readonly DateConvertion dateConvertion = new DateConvertion();
         public List<Inv> _inventoryList = new List<Inv>();
 
-        public InventoryRepo(IOpenQuery openQuery, ILogs logs, AdsContex adsContex, IItem item, IClub club)
+        public InventoryRepo(IOpenQuery openQuery, ILogs logs, AdsContext adsContext, IItem item, IClub club)
         {
             _logs = logs;
             _openQuery = openQuery;
-            _adsContex = adsContex;
+            _adsContext = adsContext;
             _item = item;
             _club = club;
         }
@@ -347,7 +347,7 @@ namespace ads.Repository
 
         public async Task<List<Inv>> GetInventoriesByDateEf(DateTime date)
         {
-            var inventories = await _adsContex.Inventories.Where(x => x.Date == date).ToListAsync();
+            var inventories = await _adsContext.Inventories.Where(x => x.Date == date).ToListAsync();
 
             return inventories;
         }
@@ -356,7 +356,7 @@ namespace ads.Repository
         {
             var clubs = await _club.GetAllClubs();
             var clubCode = clubs.Select(x => x.Number.ToString()).ToList();
-            var inventories = await _adsContex.Inventories.Where(x => x.Date == date).ToListAsync();
+            var inventories = await _adsContext.Inventories.Where(x => x.Date == date).ToListAsync();
             var filterdInventories = inventories.Where(x => x.Clubs.IsNullOrEmpty() || clubCode.Contains(x.Clubs)).ToList();
 
             return filterdInventories;
@@ -414,7 +414,7 @@ namespace ads.Repository
 
         public async Task<List<Inv>> GetEFInventoriesByDate(DateTime date)
         {
-            var inventories = await _adsContex.Inventories.Where(x => x.Date == date).ToListAsync();
+            var inventories = await _adsContext.Inventories.Where(x => x.Date == date).ToListAsync();
 
             return inventories;
         }
@@ -426,7 +426,7 @@ namespace ads.Repository
             try
             {
                 var date = updatedSales.First().Date;
-                var invToUpdateDictionary = await _adsContex.Inventories
+                var invToUpdateDictionary = await _adsContext.Inventories
                     .Where(x => x.Date == date)
                     .ToDictionaryAsync(x => new { x.Sku, x.Clubs, x.Date }, y => y);
 
@@ -443,7 +443,7 @@ namespace ads.Repository
                     }
                 }
 
-                await _adsContex.SaveChangesAsync();
+                await _adsContext.SaveChangesAsync();
             }
             catch (Exception e)
             {

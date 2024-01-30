@@ -563,7 +563,7 @@ namespace ads.Repository
             var inventoryTotalDictionaryToday = _invetory.GetDictionayOfTotalInventory(inventoryToday);
             var inventoryTodayDictionaryDayZero = _invetory.GetDictionayOfTotalInventory(inventoryDayZero);
 
-            var adsWithCurrentsales = new List<TotalAdsChain>();
+            var adsWithCurrentSales = new List<TotalAdsChain>();
 
 
             var startDateInString = $"{CurrentDateWithZeroTime:yyyy-MM-dd HH:mm:ss.fff}";
@@ -598,13 +598,13 @@ namespace ads.Repository
                         ads.EndDate = endDateInStringNew;
                     }
 
-                    adsWithCurrentsales.Add(ads);
+                    adsWithCurrentSales.Add(ads);
                 }
             }
 
-            var adsWithCurrentsalesDictionary = adsWithCurrentsales.ToDictionary(x => x.Sku, y => y);
+            var adsWithCurrentsalesDictionary = adsWithCurrentSales.ToDictionary(x => x.Sku, y => y);
 
-            adsWithCurrentsales = new List<TotalAdsChain>();
+            adsWithCurrentSales = new List<TotalAdsChain>();
 
             foreach (var item in itemsToday)
             {
@@ -634,7 +634,7 @@ namespace ads.Repository
 
                     ads.StartDate = startDateInString;
 
-                    adsWithCurrentsales.Add(ads);
+                    adsWithCurrentSales.Add(ads);
                 }
                 else
                 {
@@ -662,7 +662,7 @@ namespace ads.Repository
                             newAds.Divisor = 1;
                         }
 
-                        adsWithCurrentsales.Add(newAds);
+                        adsWithCurrentSales.Add(newAds);
                     }
                     else
                     {
@@ -676,13 +676,13 @@ namespace ads.Repository
                             EndDate = startDateInString
                         };
 
-                        adsWithCurrentsales.Add(newAds);
+                        adsWithCurrentSales.Add(newAds);
                     }
                 }
             }
 
             var recordDate = currentDate.Date;
-            await SaveTotalAdsChain(adsWithCurrentsales, recordDate);
+            await SaveTotalAdsChain(adsWithCurrentSales, recordDate);
 
             var adsPerClubs = await _totalAdsClubRepo.GetTotalAdsClubsByDate($"{adsStartDate:yyyy-MM-dd HH:mm:ss.fff}");
             var totalAdsClubDictionary = adsPerClubs.ToDictionary(x => new { x.Sku, x.Clubs });

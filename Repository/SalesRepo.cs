@@ -21,7 +21,7 @@ namespace ads.Repository
     {
         private readonly IOpenQuery _openQuery;
         private readonly ILogs _logs;
-        private readonly AdsContex _adsContex;
+        private readonly AdsContext _adsContext;
         private readonly IItem _item;
         private readonly IConfiguration _configuration;
         private readonly IClub _club;
@@ -29,11 +29,11 @@ namespace ads.Repository
         //private readonly DateConvertion dateConvertion = new DateConvertion();
         private List<Sale> _saleList = new List<Sale>();
 
-        public SalesRepo(IOpenQuery openQuery, ILogs logs, AdsContex adsContex, IItem item, IConfiguration configuration, IClub club)
+        public SalesRepo(IOpenQuery openQuery, ILogs logs, AdsContext adsContext, IItem item, IConfiguration configuration, IClub club)
         {
             _openQuery = openQuery;
             _logs = logs;
-            _adsContex = adsContex;
+            _adsContext = adsContext;
             _item = item;
             _configuration = configuration;
             _club = club;
@@ -395,7 +395,7 @@ namespace ads.Repository
 
         public async Task<List<Sale>> GetSalesByDateEf(DateTime date)
         {
-            var sales = await _adsContex.Sales.Where(x => x.Date == date).ToListAsync();
+            var sales = await _adsContext.Sales.Where(x => x.Date == date).ToListAsync();
 
             return sales;
         }
@@ -404,7 +404,7 @@ namespace ads.Repository
         {
             var clubs = await _club.GetAllClubs();
             var clubCode = clubs.Select(x => x.Number.ToString()).ToList();
-            var sales = await _adsContex.Sales.Where(x => x.Date == date).ToListAsync();
+            var sales = await _adsContext.Sales.Where(x => x.Date == date).ToListAsync();
             var filteredSales = sales.Where(x => x.Clubs.IsNullOrEmpty() || clubCode.Contains(x.Clubs)).ToList();
 
             return filteredSales;
@@ -469,10 +469,10 @@ namespace ads.Repository
 
             try
             {
-                var sales = _adsContex.Sales.Where(c => c.Date == date);
-                _adsContex.Sales.RemoveRange(sales);
+                var sales = _adsContext.Sales.Where(c => c.Date == date);
+                _adsContext.Sales.RemoveRange(sales);
 
-                await _adsContex.SaveChangesAsync();
+                await _adsContext.SaveChangesAsync();
 
                 DateTime endLogs = DateTime.Now;
                 logs.Add(new Logging
