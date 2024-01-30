@@ -3,6 +3,7 @@ using ads.Interface;
 using ads.Models.Data;
 using ads.Models.Dto.Price;
 using ads.Utility;
+using DocumentFormat.OpenXml.Bibliography;
 using DocumentFormat.OpenXml.InkML;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -14,11 +15,13 @@ public class PriceRepo : IPrice
 {
     private readonly AdsContext _adsContext;
     private readonly ILogs _logs;
+    private readonly IInventory _inventory;
 
-    public PriceRepo(AdsContext adsContext, ILogs logs)
+    public PriceRepo(AdsContext adsContext, ILogs logs, IInventory inventory)
     {
         _adsContext = adsContext;
         _logs = logs;
+        _inventory = inventory;
     }
 
     public async Task GetHistoricalPriceFromCsv(DateTime dateTime)
@@ -40,22 +43,45 @@ public class PriceRepo : IPrice
             var prices = CsvUtilityHelper.GetHistoricalListFromCsv<PriceCsvDto>(completePath).ToList();
             var importedPrices = new List<Price>();
 
+            var iventories = await _inventory.GetInventoriesByDateEf(dateTime);
+
             foreach (var priceDto in prices)
             {
                 decimal.TryParse(priceDto.CSEXPR, out var val);
 
                 var price = new Price()
                 {
-                    Club = priceDto.CSSTOR,
+                    Clubs = priceDto.CSSTOR.ToString(),
                     CreatedDate = dateTime.Date,
-                    Sku = priceDto.CSSKU,
+                    Sku = priceDto.CSSKU.ToString(),
                     Value = val
                 };
 
                 importedPrices.Add(price);
             }
 
+            var priceDictionary = importedPrices.ToDictionary(x => new { x.Sku, x.Clubs }, y => y);
+
+            foreach (var inventoryEntry in iventories)
+            {
+                var hasInventoryEntry = priceDictionary.TryGetValue(new { inventoryEntry.Sku, inventoryEntry.Clubs }, out var test);
+
+                if (!hasInventoryEntry)
+                {
+                    var newPrice = new Price()
+                    {
+                        Clubs = inventoryEntry.Clubs,
+                        CreatedDate = dateTime.Date,
+                        Sku = inventoryEntry.Sku,
+                        Value = 0
+                    };
+
+                    importedPrices.Add(newPrice);
+                }
+            }
+
             await _adsContext.Prices.AddRangeAsync(importedPrices);
+            await _adsContext.SaveChangesAsync();
         }
         catch (Exception error)
         {
