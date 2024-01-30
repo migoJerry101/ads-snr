@@ -4,6 +4,7 @@ using ads.Interface;
 using Microsoft.EntityFrameworkCore;
 using ads.Data;
 using System;
+using ads.Quarts;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,18 +25,11 @@ builder.Services.AddScoped<IItem, ItemRepo>();
 builder.Services.AddScoped<IInventoryBackup, InventoryBackup>();
 builder.Services.AddScoped<IExcel, ExcelRepo>();
 
-//Quartz run for cronjob
-builder.Services.AddQuartz(q =>
-{
-    q.UseMicrosoftDependencyInjectionJobFactory();
-    var jobKey = new JobKey("DataRepo");
-    q.AddJob<CronJobsADSRepo>(opts => opts.WithIdentity(jobKey));
+//3am
+builder.Services.AddQuartz(ScheduleConfigurator.ConfigureScheduleAds);
+//4am
+builder.Services.AddQuartz(ScheduleConfigurator.ConfigureScheduleAdsPowerBi);
 
-    q.AddTrigger(opts => opts
-        .ForJob(jobKey)
-        .WithIdentity("DataRepo-trigger")
-        .WithCronSchedule("01 00 03 * * ?"));
-});
 
 
 
