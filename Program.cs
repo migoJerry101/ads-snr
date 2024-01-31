@@ -23,6 +23,7 @@ builder.Services.AddScoped<IClub, ClubRepo>();
 builder.Services.AddScoped<IItem, ItemRepo>();
 builder.Services.AddScoped<IInventoryBackup, InventoryBackup>();
 builder.Services.AddScoped<IExcel, ExcelRepo>();
+builder.Services.AddScoped<IPrice, PriceRepo>();
 
 //Quartz run for cronjob
 builder.Services.AddQuartz(q =>
@@ -34,7 +35,7 @@ builder.Services.AddQuartz(q =>
     q.AddTrigger(opts => opts
         .ForJob(jobKey)
         .WithIdentity("DataRepo-trigger")
-        .WithCronSchedule("01 56 07 * * ?"));
+        .WithCronSchedule("01 00 03 * * ?"));
 });
 
 
