@@ -135,16 +135,17 @@ namespace ads.Repository
         //ListINVBAL - List of Inventory Groupby SKU
         public async Task<List<GeneralModel>> ListIventory(OledbCon db)
         {
-            List<GeneralModel> list = new List<GeneralModel>();
-
-            List<Logging> Log = new List<Logging>();
-
-            DateTime startLogs = DateTime.Now;
+            var list = new List<GeneralModel>();
+            var Log = new List<Logging>();
+            var startLogs = DateTime.Now;
 
             try
             {
                 //string query = "select * from Openquery([snr], 'SELECT INUMBR ,Max(ISTORE) ISTORE , CASE WHEN SUM(IBHAND) < 0 THEN 0 ELSE SUM(IBHAND) END AS IBHAND from MMJDALIB.INVBAL GROUP BY INUMBR')";
-                string query = "select * from Openquery([snr], 'SELECT INUMBR ,ISTORE, CASE WHEN MAX(IBHAND) < 0 THEN 0 ELSE MAX(IBHAND) END AS IBHAND from MMJDALIB.INVBAL GROUP BY INUMBR ,ISTORE')";
+                //string query = "select * from Openquery([snr], 'SELECT INUMBR ,ISTORE, CASE WHEN MAX(IBHAND) < 0 THEN 0 ELSE MAX(IBHAND) END AS IBHAND from MMJDALIB.INVBAL GROUP BY INUMBR ,ISTORE')";
+
+                const string query = "select * from Openquery([snr], 'SELECT INUMBR ,ISTORE, IBHAND from MMJDALIB.INVBAL')";
+
                 //string query = "select * from Openquery([snr], 'SELECT MST.INUMBR, MAX(BAL.ISTORE) ISTORE, SUM(BAL.IBHAND) IBHAND from MMJDALIB.INVMST as MST " +
                 //    "INNER JOIN MMJDALIB.INVBAL as BAL on MST.INUMBR = BAL.INUMBR " +
                 //    "WHERE MST.ISTYPE = ''01'' AND MST.IDSCCD IN (''A'',''I'',''D'',''P'') AND MST.IATRB1 IN (''L'',''I'',''LI'') " +
@@ -191,7 +192,7 @@ namespace ads.Repository
                 _logs.InsertLogs(Log);
             }
 
-            return list.ToList();
+            return list;
         }
 
         //ListTBLSTR - List of ALL STORE with Filter STPOLL = ''Y'' AND STSDAT > 0
