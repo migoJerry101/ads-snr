@@ -680,7 +680,7 @@ namespace ads.Repository
                         var newEndDate = endDateOut.AddDays(1);
                         var endDateInStringNew = $"{newEndDate:yyyy-MM-dd HH:mm:ss.fff}";
 
-                        if (perClubSalesDayZero > 0 & perClubSalesDayZero >= 0)
+                        if (perClubInvDayZero > 0 & perClubSalesDayZero >= 0)
                         {
                             adsOut.Sales -= perClubSalesDayZero;
                             adsOut.Divisor--;
