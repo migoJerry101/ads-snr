@@ -124,6 +124,21 @@ namespace ads.Controllers
         }
 
         [HttpPost]
+        [Route("GetInventoriesOpenQuery")]
+        public async Task<IActionResult> GetInventoriesOpenQuery()
+        {
+            using (OledbCon db = new OledbCon())
+            {
+                await db.OpenAsync();
+
+                var listOfSales = await _openQuery.ListIventory(db);
+
+                return Ok(new { listOfSales });
+            }
+        }
+
+
+        [HttpPost]
         [Route("ReImportSalesExcludingInventory")]
         public async Task<IActionResult> ReImportSalesExcludingInventory(List<string> dates)
         {

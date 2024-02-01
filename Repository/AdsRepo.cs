@@ -583,13 +583,7 @@ namespace ads.Repository
                         var newEndDate = endDateOut.AddDays(1);
                         var endDateInStringNew = $"{newEndDate:yyyy-MM-dd HH:mm:ss.fff}";
 
-                        if (totalInvOut > 0)
-                        {
-                            ads.Sales -= totalSalesOut;
-                            ads.Divisor--;
-                        }
-
-                        if (totalInvOut == 0 && totalSalesOut > 0)
+                        if (totalInvOut > 0 & totalSalesOut >= 0)
                         {
                             ads.Sales -= totalSalesOut;
                             ads.Divisor--;
@@ -613,70 +607,39 @@ namespace ads.Repository
 
                 if (adsWithCurrentsalesDictionary.TryGetValue(item.Sku, out var ads))
                 {
-                    if (totalSalesOut >= 0)
+
+                    if (totalInvOut > 0 & totalSalesOut >= 0)
                     {
-                        if (totalInvOut > 0)
-                        {
-                            if (ads.Divisor != 56) ads.Divisor++;
+                        if (ads.Divisor != 56) ads.Divisor++;
 
-                            ads.Sales += totalSalesOut;
-                            ads.Ads = ads.Divisor != 0 ? Math.Round(ads.Sales / ads.Divisor, 2) : 0;
-                        }
-
-                        if (totalInvOut == 0 && totalSalesOut > 0)
-                        {
-                            if (ads.Divisor != 56) ads.Divisor++;
-
-                            ads.Sales += totalSalesOut;
-                            ads.Ads = ads.Divisor != 0 ? Math.Round(ads.Sales / ads.Divisor, 2) : 0;
-                        }
+                        ads.Sales += totalSalesOut;
+                        ads.Ads = ads.Divisor != 0 ? Math.Round(ads.Sales / ads.Divisor, 2) : 0;
                     }
 
                     ads.StartDate = startDateInString;
-
                     adsWithCurrentsales.Add(ads);
                 }
                 else
                 {
-                    if (totalSalesOut >= 0)
+                    if (totalSalesOut > 0)
                     {
-                        var saleCheckedVal = totalSalesOut > 0 ? totalSalesOut : 0;
-
                         var newAds = new TotalAdsChain()
                         {
                             Divisor = 0,
-                            Sales = saleCheckedVal,
-                            Ads = totalSalesOut != 0 ? Math.Round(totalSalesOut / 1, 2) : 0,
+                            Sales = totalSalesOut,
+                            Ads = Math.Round(totalSalesOut / 1, 2),
                             Sku = item.Sku,
                             StartDate = startDateInString,
                             EndDate = startDateInString
                         };
 
-                        if (totalInvOut > 0)
-                        {
-                            newAds.Divisor = 1;
-                        }
-
-                        if (totalInvOut == 0 && totalSalesOut > 0)
+                        if (totalInvOut > 0 & totalSalesOut >= 0)
                         {
                             newAds.Divisor = 1;
                         }
 
                         adsWithCurrentsales.Add(newAds);
-                    }
-                    else
-                    {
-                        var newAds = new TotalAdsChain()
-                        {
-                            Divisor = 0,
-                            Sales = 0,
-                            Ads = 0,
-                            Sku = item.Sku,
-                            StartDate = startDateInString,
-                            EndDate = startDateInString
-                        };
 
-                        adsWithCurrentsales.Add(newAds);
                     }
                 }
             }
@@ -695,7 +658,6 @@ namespace ads.Repository
                 .ToDictionary(group => group.Key, group => group.Sum(y => y.Sales));
 
             var inventoryDayZeroWithoutNullClubsDictionary = inventoryDayZeroWithoutNullClubs.ToDictionary(x => new { x.Sku, x.Clubs }, y => y.Inventory);
-            //var inventoryTodayWithoutNullClubsDictionary = inventoryTodayWithoutNullClubs.ToDictionary(x => new { x.Sku, x.Clubs }, y => y.Inv);
 
             var adsPerClubsWithCurrentsales = new List<TotalAdsClub>();
             var clubsDictionary = await _club.GetClubsDictionary();
@@ -718,41 +680,21 @@ namespace ads.Repository
                         var newEndDate = endDateOut.AddDays(1);
                         var endDateInStringNew = $"{newEndDate:yyyy-MM-dd HH:mm:ss.fff}";
 
-                        if (perClubSalesDayZero >= 0)
+                        if (perClubSalesDayZero > 0 & perClubSalesDayZero >= 0)
                         {
-                            if (perClubInvDayZero > 0)
-                            {
-                                adsOut.Sales -= perClubSalesDayZero;
-                                adsOut.Divisor--;
-                            }
-
-                            if (perClubInvDayZero == 0 && perClubSalesDayZero > 0)
-                            {
-                                adsOut.Sales -= perClubSalesDayZero;
-                                adsOut.Divisor--;
-                            }
-
-                            adsOut.EndDate = endDateInStringNew;
+                            adsOut.Sales -= perClubSalesDayZero;
+                            adsOut.Divisor--;
                         }
+
+                        adsOut.EndDate = endDateInStringNew;
                     }
 
-                    if (perClubSalesToday >= 0)
+                    if (inv.Inventory > 0 & perClubSalesToday >= 0)
                     {
-                        if (inv.Inventory > 0)
-                        {
-                            if (adsOut.Divisor != 56) adsOut.Divisor++;
+                        if (adsOut.Divisor != 56) adsOut.Divisor++;
 
-                            adsOut.Sales += perClubSalesToday;
-                            adsOut.Ads = adsOut.Divisor != 0 ? Math.Round(adsOut.Sales / adsOut.Divisor, 2) : 0;
-                        }
-
-                        if (inv.Inventory == 0 && perClubSalesToday > 0)
-                        {
-                            if (adsOut.Divisor != 56) adsOut.Divisor++;
-
-                            adsOut.Sales += perClubSalesToday;
-                            adsOut.Ads = adsOut.Divisor != 0 ? Math.Round(adsOut.Sales / adsOut.Divisor, 2) : 0;
-                        }
+                        adsOut.Sales += perClubSalesToday;
+                        adsOut.Ads = adsOut.Divisor != 0 ? Math.Round(adsOut.Sales / adsOut.Divisor, 2) : 0;
                     }
 
                     adsOut.StartDate = startDateInString;
@@ -762,7 +704,7 @@ namespace ads.Repository
                 {
                     var currentDateCheck = DateTime.Now;
 
-                    if (perClubSalesToday >= 0)
+                    if (perClubSalesToday > 0)
                     {
                         var newAds = new TotalAdsClub()
                         {
@@ -775,12 +717,7 @@ namespace ads.Repository
                             EndDate = startDateInString
                         };
 
-                        if (inv.Inventory > 0)
-                        {
-                            newAds.Divisor = 1;
-                        }
-
-                        if (inv.Inventory == 0 && perClubSalesToday > 0)
+                        if (inv.Inventory > 0 & perClubSalesToday >= 0)
                         {
                             newAds.Divisor = 1;
                         }
