@@ -521,7 +521,8 @@ namespace ads.Repository
             var tasks = new List<Task>();
             var tasksPerClubs = new List<Task>();
             var skus = await _item.GetAllSkuWithDate();
-            var itemsToday = skus.Where(x => x.CreatedDate <= date);
+            var itemsToday = skus.Where(x => x.CreatedDate <= date.AddDays(-1).Date);
+            var itemDictionary = itemsToday.ToDictionary(x => x.Sku, y => y);
 
             //get ads first
             var currentDate = date.AddDays(-1);
@@ -597,13 +598,13 @@ namespace ads.Repository
             }
 
             var adsWithCurrentsalesDictionary = adsWithCurrentsales.ToDictionary(x => x.Sku, y => y);
-
             adsWithCurrentsales = new List<TotalAdsChain>();
 
             foreach (var item in itemsToday)
             {
                 var hasSales = salesTotalDictionaryToday.TryGetValue(item.Sku, out var totalSalesOut);
                 var hasInventory = inventoryTotalDictionaryToday.TryGetValue(item.Sku, out var totalInvOut);
+                var isItemToday = itemDictionary.TryGetValue(item.Sku, out var itemOut);
 
                 if (adsWithCurrentsalesDictionary.TryGetValue(item.Sku, out var ads))
                 {
@@ -621,7 +622,7 @@ namespace ads.Repository
                 }
                 else
                 {
-                    if (totalSalesOut > 0)
+                    if (totalInvOut > 0 & totalSalesOut > 0 & isItemToday)
                     {
                         var newAds = new TotalAdsChain()
                         {
@@ -639,7 +640,6 @@ namespace ads.Repository
                         }
 
                         adsWithCurrentsales.Add(newAds);
-
                     }
                 }
             }
@@ -702,9 +702,10 @@ namespace ads.Repository
                 }
                 else
                 {
+                    var isItemToday = itemDictionary.TryGetValue(inv.Sku, out var itemOut);
                     var currentDateCheck = DateTime.Now;
 
-                    if (perClubSalesToday > 0)
+                    if (inv.Inventory > 0 & perClubSalesToday > 0 & isItemToday)
                     {
                         var newAds = new TotalAdsClub()
                         {
@@ -722,25 +723,7 @@ namespace ads.Repository
                             newAds.Divisor = 1;
                         }
 
-                        if (currentDateCheck > StartDate)
-                        {
-                            adsPerClubsWithCurrentsales.Add(newAds);
-                        }
-                    }
-                    else
-                    {
-                        var newAds = new TotalAdsClub()
-                        {
-                            Divisor = 0,
-                            Sales = 0,
-                            Ads = 0,
-                            Sku = inv.Sku,
-                            Clubs = inv.Clubs,
-                            StartDate = startDateInString,
-                            EndDate = startDateInString
-                        };
-
-                        if (currentDateCheck > StartDate)
+                        if (currentDateCheck > StartDate & isItemToday)
                         {
                             adsPerClubsWithCurrentsales.Add(newAds);
                         }
