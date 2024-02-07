@@ -2,6 +2,7 @@
 using ads.Interface;
 using ads.Models.Data;
 using ads.Models.Dto.ItemsDto;
+using ads.Models.Dto.Sale;
 using ads.Utility;
 using DocumentFormat.OpenXml.Drawing;
 using DocumentFormat.OpenXml.InkML;
@@ -122,7 +123,7 @@ namespace ads.Repository
                             }
                         }
 
-                        if(!hasInv & !hasSales)
+                        if (!hasInv & !hasSales)
                         {
                             // this entry is in the master list of sku, but not yet part of sales and enventory table
                             // this is used when computing chain/all store ADS
@@ -533,6 +534,82 @@ namespace ads.Repository
             }
 
             return salesWithDiff;
+        }
+
+        public async Task<List<Sale>> GetSalesByDates(List<DateTime> dates)
+        {
+            var startLog = DateTime.Now;
+            var logs = new List<Logging>();
+
+            try
+            {
+                var salesOfDayZeroes = new List<Sale>();
+
+                foreach (var date in dates)
+                {
+                    var sales = await _adsContex.Sales.Where(c => c.Date == date).ToListAsync();
+                    salesOfDayZeroes.AddRange(sales);
+                }
+
+                return salesOfDayZeroes;
+            }
+            catch (Exception error)
+            {
+                DateTime endLogs = DateTime.Now;
+                logs.Add(new Logging
+                {
+                    StartLog = startLog,
+                    EndLog = endLogs,
+                    Action = "GetSalesByDates",
+                    Message = error.Message,
+                    Record_Date = endLogs
+                });
+
+                _logs.InsertLogs(logs);
+
+                throw;
+            }
+        }
+
+        public Dictionary<SalesKey, decimal> GetDictionayOfTotalSalesWithSalesKey(List<Sale> sales)
+        {
+            var startLog = DateTime.Now;
+
+            try
+            {
+                var salesDictionary = sales
+                    .GroupBy(x => new SalesKey() { Date = x.Date, Sku = x.Sku})
+                    .ToDictionary(
+                     group => group.Key,
+                     group =>
+                     {
+                         var count = group.Count();
+
+                         if (count > 1) return group.Where(x => x.Sales >= 0).Sum(item => item.Sales);
+                         
+                         return group.Sum(item => item.Sales);
+                     });
+
+                return salesDictionary;
+            }
+            catch (Exception error)
+            {
+                var logs = new List<Logging>();
+                var endLogs = DateTime.Now;
+
+                logs.Add(new Logging
+                {
+                    StartLog = startLog,
+                    EndLog = endLogs,
+                    Action = "GetDictionayOfTotalSalesWithSalesKey",
+                    Message = error.Message,
+                    Record_Date = endLogs
+                });
+
+                _logs.InsertLogs(logs);
+
+                throw;
+            }
         }
     }
 }

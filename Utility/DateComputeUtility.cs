@@ -45,5 +45,22 @@ namespace ads.Utility
 
             return differenceOut.Days;
         }
+
+        public static List<DateTime> GetDatesAndDaysAfter(DateTime startDate, int numDays)
+        {
+            var dates = new List<DateTime>
+            {
+                startDate
+            };
+
+            var currentDate = startDate;
+            for (int i = 0; i < numDays; i++)
+            {
+                currentDate = currentDate.AddDays(1);
+                dates.Add(currentDate);
+            }
+
+            return dates;
+        }
     }
 }
