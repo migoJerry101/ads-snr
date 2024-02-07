@@ -464,5 +464,42 @@ namespace ads.Repository
             }
 
         }
+
+        public async Task<List<Inv>> GetInventoriesByDates(List<DateTime> dates)
+        {
+            var startLog = DateTime.Now;
+
+            try
+            {
+                var inventories = new List<Inv>();
+
+                foreach (var date in dates)
+                {
+                    var inventoriesDayZero = await _adsContex.Inventories.Where(x => x.Date == date).ToListAsync();
+
+                    inventories.AddRange(inventoriesDayZero);
+                }
+
+                return inventories;
+            }
+            catch (Exception error)
+            {
+                var logs = new List<Logging>();
+                var endLogs = DateTime.Now;
+
+                logs.Add(new Logging
+                {
+                    StartLog = startLog,
+                    EndLog = endLogs,
+                    Action = "GetInventoriesByDates",
+                    Message = error.Message,
+                    Record_Date = endLogs
+                });
+
+                _logs.InsertLogs(logs);
+
+                throw;
+            }
+        }
     }
 }

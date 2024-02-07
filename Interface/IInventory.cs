@@ -17,5 +17,6 @@ namespace ads.Interface
         Task BatchUpdateInventoryBysales(List<Sale> updatedSales);
         Task<List<Inv>> GetInventoriesByDateEf(DateTime date);
         Task<List<Inv>> GetInventoriesByDateAndClubs(DateTime date);
+        Task<List<Inv>> GetInventoriesByDates(List<DateTime> dates);
     }
 }

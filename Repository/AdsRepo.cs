@@ -1,6 +1,7 @@
 ﻿using ads.Data;
 using ads.Interface;
 using ads.Models.Data;
+using ads.Models.Dto.Sale;
 using ads.Utility;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -531,23 +532,39 @@ namespace ads.Repository
             var adsStartDate = new DateTime(AdsDate.Year, AdsDate.Month, AdsDate.Day, 0, 0, 0, 0);
 
             var adsChain = await _totalAdsChainRepo.GetTotalAdsChainByDate($"{adsStartDate:yyyy-MM-dd HH:mm:ss.fff}");
+            string format = "yyyy-MM-dd HH:mm:ss.fff";
+
+            //get ads clubs to get the longest range of date
+            var adsPerClubs = await _totalAdsClubRepo.GetTotalAdsClubsByDate($"{adsStartDate:yyyy-MM-dd HH:mm:ss.fff}");
+            var adsDayZeorClubs = adsPerClubs.Count > 0 ? adsPerClubs[0].EndDate : $"{CurrentDateWithZeroTime:yyyy-MM-dd HH:mm:ss.fff}";
+            var numberOfDayZero = DateComputeUtility.GetDifferenceInRange($"{adsStartDate:yyyy-MM-dd HH:mm:ss.fff}", adsDayZeorClubs)-56;
+            var numberOfDayZeroFinal = numberOfDayZero >= 0 ? numberOfDayZero : 0;
+
+            DateTime.TryParseExact(adsDayZeorClubs, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime endDateOut);
+            //get list of day zeros
+            var listOfDayZero = DateComputeUtility.GetDatesAndDaysAfter(endDateOut, numberOfDayZeroFinal);
+
 
             //get one sample from ads chain then get start and end date
-            var adsDayZeor = adsChain.Count > 0 ? adsChain[0].EndDate : $"{CurrentDateWithZeroTime:yyyy-MM-dd HH:mm:ss.fff}";
-            string format = "yyyy-MM-dd HH:mm:ss.fff";
-            DateTime.TryParseExact(adsDayZeor, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime endDateOut);
+            //var adsDayZeor = adsChain.Count > 0 ? adsChain[0].EndDate : $"{CurrentDateWithZeroTime:yyyy-MM-dd HH:mm:ss.fff}";
+            //DateTime.TryParseExact(adsDayZeor, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime endDateOut);
 
             //sales for chain
             var SalesToday = await _sales.GetSalesByDateAndClub(CurrentDateWithZeroTime); //to add
-            var salesDayZero = await _sales.GetSalesByDateAndClub(endDateOut); // to subtract
+            //var salesDayZero = await _sales.GetSalesByDateAndClub(endDateOut); // to subtract
+
+            //get sales for multiple day Zero
+            var salesDayZeroes = await _sales.GetSalesByDates(listOfDayZero);// to subtract
+
+            //get inventory for multiple dat zero
 
             //sales for clubs
             var salesTodayWithoutNullClubs = SalesToday.Where(i => !i.Clubs.IsNullOrEmpty());
-            var salesDayZeroWithoutNullClubs = salesDayZero.Where(i => !i.Clubs.IsNullOrEmpty());
+            var salesDayZeroWithoutNullClubs = salesDayZeroes.Where(i => !i.Clubs.IsNullOrEmpty());
 
             //getInventory today and dayzero
             var inventoryToday = await _invetory.GetInventoriesByDateAndClubs(CurrentDateWithZeroTime);
-            var inventoryDayZero = await _invetory.GetInventoriesByDateAndClubs(endDateOut);
+            var inventoryDayZero = await _invetory.GetInventoriesByDates(listOfDayZero);
 
             var inventoryDayZeroWithoutNullClubs = inventoryDayZero.Where(i => !i.Clubs.IsNullOrEmpty());
             var inventoryTodayWithoutNullClubs = inventoryToday.Where(c => !c.Clubs.IsNullOrEmpty());
@@ -559,7 +576,7 @@ namespace ads.Repository
             var chainDictionary = adsChain.Distinct().ToDictionary(c => c.Sku, y => y);
 
             var salesTotalDictionaryToday = _sales.GetDictionayOfTotalSales(SalesToday);
-            var salesTotalDictionaryDayZero = _sales.GetDictionayOfTotalSales(salesDayZero);
+            var salesTotalDictionaryDayZero = _sales.GetDictionayOfTotalSalesWithSalesKey(salesDayZeroes);
 
             var inventoryTotalDictionaryToday = _invetory.GetDictionayOfTotalInventory(inventoryToday);
             var inventoryTodayDictionaryDayZero = _invetory.GetDictionayOfTotalInventory(inventoryDayZero);
@@ -568,20 +585,28 @@ namespace ads.Repository
 
 
             var startDateInString = $"{CurrentDateWithZeroTime:yyyy-MM-dd HH:mm:ss.fff}";
-            var endDateInString = $"{endDateOut:yyyy-MM-dd HH:mm:ss.fff}";
+            //var endDateInString = $"{endDateOut:yyyy-MM-dd HH:mm:ss.fff}";
 
             foreach (var item in itemsToday)
             {
                 if (chainDictionary.TryGetValue(item.Sku, out var ads))
                 {
-                    var hasSales = salesTotalDictionaryDayZero.TryGetValue(item.Sku, out var totalSalesOut);
+                    var adsItemEndDate = DateTime.Parse(ads.EndDate);
+                    var key = new SalesKey()
+                    {
+                        Sku = item.Sku,
+                        Date = adsItemEndDate
+                    };
+
+                    var hasSales = salesTotalDictionaryDayZero.TryGetValue(key, out var totalSalesOut);
                     var hasInventory = inventoryTodayDictionaryDayZero.TryGetValue(item.Sku, out var totalInvOut);
+                    var hasInventoryToday = inventoryTotalDictionaryToday.TryGetValue(item.Sku, out var totalInvOutToday);
 
                     var daysDifferenceOut = DateComputeUtility.GetDifferenceInRange(ads.StartDate, ads.EndDate);
 
-                    if (daysDifferenceOut == 56)
+                    if (daysDifferenceOut >= 56 & totalInvOutToday > 0 & ads.Divisor == 56)
                     {
-                        var newEndDate = endDateOut.AddDays(1);
+                        var newEndDate = adsItemEndDate.AddDays(1);
                         var endDateInStringNew = $"{newEndDate:yyyy-MM-dd HH:mm:ss.fff}";
 
                         if (totalInvOut > 0 & totalSalesOut >= 0)
@@ -606,8 +631,10 @@ namespace ads.Repository
                 var hasInventory = inventoryTotalDictionaryToday.TryGetValue(item.Sku, out var totalInvOut);
                 var isItemToday = itemDictionary.TryGetValue(item.Sku, out var itemOut);
 
+
                 if (adsWithCurrentsalesDictionary.TryGetValue(item.Sku, out var ads))
                 {
+                    var daysDifferenceOut = DateComputeUtility.GetDifferenceInRange(ads.StartDate, ads.EndDate);
 
                     if (totalInvOut > 0 & totalSalesOut >= 0)
                     {
@@ -647,17 +674,25 @@ namespace ads.Repository
             var recordDate = currentDate.Date;
             await SaveTotalAdsChain(adsWithCurrentsales, recordDate);
 
-            var adsPerClubs = await _totalAdsClubRepo.GetTotalAdsClubsByDate($"{adsStartDate:yyyy-MM-dd HH:mm:ss.fff}");
+            //var adsPerClubs = await _totalAdsClubRepo.GetTotalAdsClubsByDate($"{adsStartDate:yyyy-MM-dd HH:mm:ss.fff}");
             var totalAdsClubDictionary = adsPerClubs.ToDictionary(x => new { x.Sku, x.Clubs });
 
             var salesTodayWithoutNullClubsDictionary = salesTodayWithoutNullClubs
                 .GroupBy(x => new { x.Sku, x.Clubs })
                 .ToDictionary(group => group.Key, group => group.Sum(y => y.Sales));
             var salesDayZeroWithoutNullClubsDictionary = salesDayZeroWithoutNullClubs
-                .GroupBy(x => new { x.Sku, x.Clubs })
+                .GroupBy(x => new SalesClubKey() { Sku = x.Sku, Club = x.Clubs, Date = x.Date })
                 .ToDictionary(group => group.Key, group => group.Sum(y => y.Sales));
 
-            var inventoryDayZeroWithoutNullClubsDictionary = inventoryDayZeroWithoutNullClubs.ToDictionary(x => new { x.Sku, x.Clubs }, y => y.Inventory);
+            var inventoryDayZeroWithoutNullClubsDictionary = inventoryDayZeroWithoutNullClubs
+                .ToDictionary(x =>
+                    new SalesClubKey() 
+                    {
+                        Sku = x.Sku,
+                        Club = x.Clubs,
+                        Date = x.Date 
+                    },
+                    y => y.Inventory);
 
             var adsPerClubsWithCurrentsales = new List<TotalAdsClub>();
             var clubsDictionary = await _club.GetClubsDictionary();
@@ -670,14 +705,23 @@ namespace ads.Repository
 
                 if (hasAds & isAclub)
                 {
+                    var adsClubEndDate = DateTime.Parse(adsOut.EndDate);
+
+                    var salesClubKey = new SalesClubKey()
+                    {
+                        Sku = inv.Sku,
+                        Date = adsClubEndDate,
+                        Club = inv.Clubs
+                    };
+
                     var daysDifferenceOut = DateComputeUtility.GetDifferenceInRange(adsOut.StartDate, adsOut.EndDate);
 
-                    if (daysDifferenceOut == 56)
+                    if (daysDifferenceOut >= 56 & inv.Inventory > 0 & adsOut.Divisor == 56)
                     {
-                        salesDayZeroWithoutNullClubsDictionary.TryGetValue(new { inv.Sku, inv.Clubs }, out var perClubSalesDayZero);
-                        inventoryDayZeroWithoutNullClubsDictionary.TryGetValue(new { inv.Sku, inv.Clubs }, out var perClubInvDayZero);
+                        salesDayZeroWithoutNullClubsDictionary.TryGetValue(salesClubKey, out var perClubSalesDayZero);
+                        inventoryDayZeroWithoutNullClubsDictionary.TryGetValue(salesClubKey, out var perClubInvDayZero);
 
-                        var newEndDate = endDateOut.AddDays(1);
+                        var newEndDate = adsClubEndDate.AddDays(1);
                         var endDateInStringNew = $"{newEndDate:yyyy-MM-dd HH:mm:ss.fff}";
 
                         if (perClubInvDayZero > 0 & perClubSalesDayZero >= 0)
@@ -691,7 +735,7 @@ namespace ads.Repository
 
                     if (inv.Inventory > 0 & perClubSalesToday >= 0)
                     {
-                        if (adsOut.Divisor != 56) adsOut.Divisor++;
+                        if (adsOut.Divisor < 56) adsOut.Divisor++;
 
                         adsOut.Sales += perClubSalesToday;
                         adsOut.Ads = adsOut.Divisor != 0 ? Math.Round(adsOut.Sales / adsOut.Divisor, 2) : 0;

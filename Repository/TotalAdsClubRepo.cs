@@ -53,7 +53,10 @@ namespace ads.Repository
 
         public async Task<List<TotalAdsClub>> GetTotalAdsClubsByDate(string date)
         {
-            var ads = await _context.TotalAdsClubs.Where(x => x.StartDate == date).ToListAsync();
+            var ads = await _context.TotalAdsClubs
+                .Where(x => x.StartDate == date)
+                .OrderBy(y => y.EndDate)
+                .ToListAsync();
 
             return ads;
         }
