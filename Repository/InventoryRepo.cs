@@ -8,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.EntityFrameworkCore;
 using ads.Models.Dto.ItemsDto;
 using System.Collections.Immutable;
+using ads.Models.Dto.Sale;
 
 namespace ads.Repository
 {
@@ -392,9 +393,16 @@ namespace ads.Repository
             return _inventoryList;
         }
 
-        public Dictionary<string, decimal> GetDictionayOfTotalInventory(List<Inv> inventories)
+        public Dictionary<SalesKey, decimal> GetDictionayOfTotalInventory(List<Inv> inventories)
         {
-            var inventoryDictionary = inventories.GroupBy(x => x.Sku).ToDictionary(
+            var inventoryDictionary = inventories
+                .GroupBy(x => 
+                    new SalesKey() 
+                    { 
+                        Sku = x.Sku,
+                        Date = x.Date 
+                    })
+                .ToDictionary(
                 group => group.Key,
                 group => group.Sum(item => item.Inventory)
             );

@@ -1,6 +1,7 @@
 ﻿using ads.Data;
 using ads.Models.Data;
 using ads.Models.Dto.ItemsDto;
+using ads.Models.Dto.Sale;
 
 namespace ads.Interface
 {
@@ -11,7 +12,7 @@ namespace ads.Interface
         string TotalInventory(string startDate, string endDate);
         Task<int> CountInventory(string dateListString, OledbCon db);
         Task<List<Inv>> GetInventoriesByDate(DateTime date);
-        Dictionary<string, decimal> GetDictionayOfTotalInventory(List<Inv> inventories);
+        Dictionary<SalesKey, decimal> GetDictionayOfTotalInventory(List<Inv> inventories);
         Dictionary<string, decimal> GetDictionayOfPerClubhlInventory(List<Inv> inventories);
         Task<List<Inv>> GetEFInventoriesByDate(DateTime date);
         Task BatchUpdateInventoryBysales(List<Sale> updatedSales);
