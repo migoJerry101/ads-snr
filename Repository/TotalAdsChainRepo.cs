@@ -7,6 +7,7 @@ using System.Data;
 using System.Data.SqlClient;
 using ads.Models.Dto.AdsChain;
 using ads.Models.Dto.AdsClub;
+using ads.Models.Dto.Sale;
 
 namespace ads.Repository
 {
@@ -118,8 +119,14 @@ namespace ads.Repository
 
                     foreach (var adsItem in adsChain)
                     {
+                        var todayKey = new SalesKey()
+                        {
+                            Sku = adsItem.Sku,
+                            Date = currentDate
+                        };
+
                         salesDictionary.TryGetValue((adsItem.Sku), out var salesToday);
-                        inventoriesDictionary.TryGetValue((adsItem.Sku), out var InventoryToday);
+                        inventoriesDictionary.TryGetValue(todayKey, out var InventoryToday);
 
                         adsItem.Sales = salesToday;
                         adsItem.OnHand = InventoryToday;
