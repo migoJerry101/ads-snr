@@ -70,7 +70,7 @@ namespace ads.Controllers
                 var dateFormat = DateConvertion.ConvertStringDate(date);
                 var startDateInString = $"{dateFormat:yyyy-MM-dd HH:mm:ss.fff}";
                 //convert date to string
-                await _totalAdsChain.DeleteAdsChainAsync(startDateInString);
+                await _totalAdsChain.DeleteAdsChainAsync(startDateInString); 
                 await _totalAdsClub.DeleteAdsClubsAsync(startDateInString);
 
                 var dateToCompute = dateFormat.AddDays(1).Date;
@@ -122,6 +122,21 @@ namespace ads.Controllers
                 return Ok(new { listOfSales });
             }
         }
+
+        [HttpPost]
+        [Route("GetInventoriesOpenQuery")]
+        public async Task<IActionResult> GetInventoriesOpenQuery()
+        {
+            using (OledbCon db = new OledbCon())
+            {
+                await db.OpenAsync();
+
+                var listOfSales = await _openQuery.ListIventory(db);
+
+                return Ok(new { listOfSales });
+            }
+        }
+
 
         [HttpPost]
         [Route("ReImportSalesExcludingInventory")]

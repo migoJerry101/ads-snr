@@ -1,6 +1,7 @@
 ﻿using ads.Data;
 using ads.Models.Data;
 using ads.Models.Dto.ItemsDto;
+using ads.Models.Dto.Sale;
 
 namespace ads.Interface
 {
@@ -17,5 +18,7 @@ namespace ads.Interface
         Task<List<Sale>> GetSalesByDateEf(DateTime date);
         void DeleteSalesByDate(DateTime date);
         Task<List<Sale>> GetSalesByDateAndClub(DateTime date);
+        Task<List<Sale>> GetSalesByDates(List<DateTime> dates);
+        Dictionary<SalesKey, decimal> GetDictionayOfTotalSalesWithSalesKey(List<Sale> sales);
     }
 }

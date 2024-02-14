@@ -8,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.EntityFrameworkCore;
 using ads.Models.Dto.ItemsDto;
 using System.Collections.Immutable;
+using ads.Models.Dto.Sale;
 
 namespace ads.Repository
 {
@@ -392,9 +393,16 @@ namespace ads.Repository
             return _inventoryList;
         }
 
-        public Dictionary<string, decimal> GetDictionayOfTotalInventory(List<Inv> inventories)
+        public Dictionary<SalesKey, decimal> GetDictionayOfTotalInventory(List<Inv> inventories)
         {
-            var inventoryDictionary = inventories.GroupBy(x => x.Sku).ToDictionary(
+            var inventoryDictionary = inventories
+                .GroupBy(x => 
+                    new SalesKey() 
+                    { 
+                        Sku = x.Sku,
+                        Date = x.Date 
+                    })
+                .ToDictionary(
                 group => group.Key,
                 group => group.Sum(item => item.Inventory)
             );
@@ -463,6 +471,43 @@ namespace ads.Repository
                 _logs.InsertLogs(logs);
             }
 
+        }
+
+        public async Task<List<Inv>> GetInventoriesByDates(List<DateTime> dates)
+        {
+            var startLog = DateTime.Now;
+
+            try
+            {
+                var inventories = new List<Inv>();
+
+                foreach (var date in dates)
+                {
+                    var inventoriesDayZero = await _adsContex.Inventories.Where(x => x.Date == date).ToListAsync();
+
+                    inventories.AddRange(inventoriesDayZero);
+                }
+
+                return inventories;
+            }
+            catch (Exception error)
+            {
+                var logs = new List<Logging>();
+                var endLogs = DateTime.Now;
+
+                logs.Add(new Logging
+                {
+                    StartLog = startLog,
+                    EndLog = endLogs,
+                    Action = "GetInventoriesByDates",
+                    Message = error.Message,
+                    Record_Date = endLogs
+                });
+
+                _logs.InsertLogs(logs);
+
+                throw;
+            }
         }
     }
 }
