@@ -483,7 +483,7 @@ namespace ads.Repository
 
                 foreach (var date in dates)
                 {
-                    var inventoriesDayZero = await _adsContex.Inventories.Where(x => x.Date == date).ToListAsync();
+                    var inventoriesDayZero = await _adsContext.Inventories.Where(x => x.Date == date).ToListAsync();
 
                     inventories.AddRange(inventoriesDayZero);
                 }

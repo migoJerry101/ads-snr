@@ -624,8 +624,8 @@ namespace ads.Repository
                 }
             }
 
-            var adsWithCurrentsalesDictionary = adsWithCurrentsales.ToDictionary(x => x.Sku, y => y);
-            adsWithCurrentsales = new List<TotalAdsChain>();
+            var adsWithCurrentsalesDictionary = adsWithCurrentSales.ToDictionary(x => x.Sku, y => y);
+            adsWithCurrentSales = new List<TotalAdsChain>();
 
             foreach (var item in itemsToday)
             {
@@ -653,7 +653,7 @@ namespace ads.Repository
                     }
 
                     ads.StartDate = startDateInString;
-                    adsWithCurrentsales.Add(ads);
+                    adsWithCurrentSales.Add(ads);
                 }
                 else
                 {

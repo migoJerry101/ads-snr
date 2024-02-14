@@ -547,7 +547,7 @@ namespace ads.Repository
 
                 foreach (var date in dates)
                 {
-                    var sales = await _adsContex.Sales.Where(c => c.Date == date).ToListAsync();
+                    var sales = await _adsContext.Sales.Where(c => c.Date == date).ToListAsync();
                     salesOfDayZeroes.AddRange(sales);
                 }
 
