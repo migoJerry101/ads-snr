@@ -509,5 +509,52 @@ namespace ads.Repository
                 throw;
             }
         }
+
+        public async Task<List<Inv>> GetInventoriesWithFilteredSku(Dictionary<string, List<string>> sku, List<DateTime> days)
+        {
+            var startLog = DateTime.Now;
+
+            try
+            {
+                var inventories = new List<Inv>();
+
+                foreach (var day in days)
+                {
+                    var hasSku = sku.TryGetValue($"{day:yyyy-MM-dd HH:mm:ss.fff}", out var skuOut);
+
+                    if (hasSku)
+                    {
+                        var distinct = skuOut.Distinct();
+
+                        var inventoriesToday = await _adsContex.Inventories
+                            .Where(x => x.Date == day && distinct.Contains(x.Sku))
+                            .ToListAsync();
+
+                        inventories.AddRange(inventoriesToday);
+                    }
+
+                }
+
+                return inventories;
+            }
+            catch (Exception error)
+            {
+                var logs = new List<Logging>();
+                var endLogs = DateTime.Now;
+
+                logs.Add(new Logging
+                {
+                    StartLog = startLog,
+                    EndLog = endLogs,
+                    Action = "GetInventoriesWithFilter",
+                    Message = error.Message,
+                    Record_Date = endLogs
+                });
+
+                _logs.InsertLogs(logs);
+
+                throw;
+            }
+        }
     }
 }

@@ -70,7 +70,7 @@ namespace ads.Controllers
                 var dateFormat = DateConvertion.ConvertStringDate(date);
                 var startDateInString = $"{dateFormat:yyyy-MM-dd HH:mm:ss.fff}";
                 //convert date to string
-                await _totalAdsChain.DeleteAdsChainAsync(startDateInString); 
+                await _totalAdsChain.DeleteAdsChainAsync(startDateInString);
                 await _totalAdsClub.DeleteAdsClubsAsync(startDateInString);
 
                 var dateToCompute = dateFormat.AddDays(1).Date;
