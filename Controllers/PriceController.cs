@@ -1,4 +1,5 @@
 ﻿using ads.Interface;
+using ads.Utility;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -18,9 +19,23 @@ namespace ads.Controllers
 
         [HttpPost]
         [Route("GetHistoricalPriceFromCsv")]
-        public async Task<IActionResult> GetHistoricalPriceFromCsv(DateTime date)
+        public async Task<IActionResult> GetHistoricalPriceFromCsv(string date)
         {
-             await _price.GetHistoricalPriceFromCsv(date);
+            var dateFormat = DateConvertion.ConvertStringDate(date);
+            await _price.GetHistoricalPriceFromCsv(dateFormat);
+
+            return Ok();
+        }
+
+        [HttpPost]
+        [Route("GetHistoricalPriceByDatesFromCsv")]
+        public async Task<IActionResult> GetHistoricalPriceByDatesFromCsv(List<string> dates)
+        {
+            foreach (var date in dates)
+            {
+                var dateFormat = DateConvertion.ConvertStringDate(date);
+                await _price.GetHistoricalPriceFromCsv(dateFormat);
+            }
 
             return Ok();
         }
