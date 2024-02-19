@@ -8,6 +8,7 @@ using System.Data.SqlClient;
 using ads.Models.Dto.AdsChain;
 using ads.Models.Dto.AdsClub;
 using DocumentFormat.OpenXml.InkML;
+using ads.Models.Dto.Price;
 
 namespace ads.Repository
 {
@@ -18,19 +19,22 @@ namespace ads.Repository
         private readonly IConfiguration _configuration;
         private readonly ISales _sales;
         private readonly IInventory _inventory;
+        private readonly IPrice _price;
 
         public TotalAdsClubRepo(
             AdsContext context,
             ILogs logs,
             IConfiguration configuration,
             ISales sales,
-            IInventory inventory)
+            IInventory inventory,
+            IPrice price)
         {
             _context = context;
             _logs = logs;
             _configuration = configuration;
             _sales = sales;
             _inventory = inventory;
+            _price = price;
         }
 
         public async Task<(List<TotalAdsClub>, int totalPages)> GetPaginatedTotalAdsClubs(TotalAdsChainPaginationDto data)
@@ -171,5 +175,48 @@ namespace ads.Repository
                 throw;
             }
         }
+
+        public async Task UpdateClubTotalAverageSales(DateTime date)
+        {
+            var Log = new List<Logging>();
+            DateTime startLogs = DateTime.Now;
+
+            try
+            {
+                var price = await _price.GetPricesByDateAsync(date);
+                var priceDictionary = price.ToDictionary(x => new PriceKey() { Club = x.Club, Sku = x.Sku }, x => x);
+                var adsClubs = await _context.TotalAdsClubs.Where(x => x.StartDate == $"{date:yyyy-MM-dd HH:mm:ss.fff}").ToListAsync();
+
+                foreach (var adsClub in adsClubs)
+                {
+                    var hasPrice = priceDictionary
+                        .TryGetValue(new PriceKey()
+                        {
+                            Club = adsClub.Clubs,
+                            Sku = adsClub.Sku
+                        }, out var priceOut);
+
+                    if (hasPrice && priceOut is not null) adsClub.OverallSales = priceOut.Value * adsClub.Sales;
+                }
+
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception error)
+            {
+
+                DateTime endLogs = DateTime.Now;
+                Log.Add(new Logging
+                {
+                    StartLog = startLogs,
+                    EndLog = endLogs,
+                    Action = "UpdateClubTotalAverageSales",
+                    Message = error.Message,
+                    Record_Date = date
+                });
+
+                _logs.InsertLogs(Log);
+            }
+        }
+
     }
 }

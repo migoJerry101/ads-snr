@@ -1,6 +1,7 @@
 ﻿using ads.Data;
 using ads.Interface;
 using ads.Models.Data;
+using ads.Models.Dto.Price;
 using ads.Models.Dto.Sale;
 using ads.Utility;
 using Microsoft.AspNetCore.Http;
@@ -31,6 +32,7 @@ namespace ads.Repository
         private readonly ITotalAdsClub _totalAdsClubRepo;
         private readonly ITotalAdsChain _totalAdsChainRepo;
         private readonly IItem _item;
+        private readonly IPrice _price;
 
         public AdsRepo(
             ISales sales,
@@ -39,7 +41,8 @@ namespace ads.Repository
             IClub club,
             ITotalAdsClub totalAdsClubRepo,
             ITotalAdsChain totalAdsChainRepo,
-            IItem item)
+            IItem item,
+            IPrice price)
         {
             _sales = sales;
             _invetory = invetory;
@@ -48,6 +51,7 @@ namespace ads.Repository
             _totalAdsClubRepo = totalAdsClubRepo;
             _totalAdsChainRepo = totalAdsChainRepo;
             _item = item;
+            _price = price;
         }
 
 
@@ -548,7 +552,7 @@ namespace ads.Repository
             var listOfDayZero = DateComputeUtility.GetDatesAndDaysAfter(endDateOut, numberOfDayZeroFinal);
 
             //sales for chain
-            var SalesToday = await _sales.GetSalesByDateAndClub(CurrentDateWithZeroTime); //to add
+            var SalesToday = await _sales.GetSalesByDateEf(CurrentDateWithZeroTime); //to add
 
             //get sales for multiple day Zero
             var salesDayZeroes = await _sales.GetSalesByDates(listOfDayZero);// to subtract
@@ -560,7 +564,7 @@ namespace ads.Repository
             var salesDayZeroWithoutNullClubs = salesDayZeroes.Where(i => !i.Clubs.IsNullOrEmpty());
 
             //getInventory today and dayzero
-            var inventoryToday = await _invetory.GetInventoriesByDateAndClubs(CurrentDateWithZeroTime);
+            var inventoryToday = await _invetory.GetInventoriesByDateEf(CurrentDateWithZeroTime);
             var inventoryDayZeroes = await _invetory.GetInventoriesByDates(listOfDayZero);
 
             var inventoryDayZeroWithoutNullClubs = inventoryDayZeroes.Where(i => !i.Clubs.IsNullOrEmpty());
@@ -684,6 +688,10 @@ namespace ads.Repository
 
             var totalAdsClubDictionary = adsPerClubs.ToDictionary(x => new { x.Sku, x.Clubs });
 
+            //prices per clubs
+            //var price = await _price.GetPricesByDateAsync(date);
+            //var priceDictionary = price.ToDictionary(x => new PriceKey() { Club = x.Club, Sku = x.Sku });
+
             var salesTodayWithoutNullClubsDictionary = salesTodayWithoutNullClubs
                 .GroupBy(x => new { x.Sku, x.Clubs })
                 .ToDictionary(group => group.Key, group => group.Sum(y => y.Sales));
@@ -717,6 +725,15 @@ namespace ads.Repository
 
             foreach (var inv in inventoryTodayWithoutNullClubs)
             {
+                //------implement after import of price are fix
+                //var priceKey = new PriceKey()
+                //{
+                //    Sku = inv.Sku,
+                //    Club = inv.Clubs
+                //};
+                //var hasPrice = priceDictionary.TryGetValue(priceKey, out var priceOut);
+                //------implement after import of price are fix
+
                 var hasAds = totalAdsClubDictionary.TryGetValue(new { inv.Sku, inv.Clubs }, out var adsOut);
                 var isAclub = clubsDictionary.TryGetValue(Convert.ToInt32(inv.Clubs), out var StartDate);
 
@@ -759,6 +776,9 @@ namespace ads.Repository
 
                         adsOut.Sales += perClubSalesToday;
                         adsOut.Ads = adsOut.Divisor != 0 ? Math.Round(adsOut.Sales / adsOut.Divisor, 2) : 0;
+                        adsOut.OverallSales = 0;
+                        //implement after import of price are fix
+                        //if (hasPrice) adsOut.OverallSales = adsOut.Sales * priceOut.Value;
                     }
 
                     adsOut.StartDate = startDateInString;
@@ -779,7 +799,8 @@ namespace ads.Repository
                             Sku = inv.Sku,
                             Clubs = inv.Clubs,
                             StartDate = startDateInString,
-                            EndDate = startDateInString
+                            EndDate = startDateInString,
+                            OverallSales = 0
                         };
 
                         if (inv.Inventory > 0 & perClubSalesToday >= 0)
@@ -823,6 +844,7 @@ namespace ads.Repository
                             dataTable.Columns.Add("Sales", typeof(decimal));
                             dataTable.Columns.Add("Divisor", typeof(int));
                             dataTable.Columns.Add("Ads", typeof(decimal));
+                            dataTable.Columns.Add("OverallSales", typeof(decimal));
                             dataTable.Columns.Add("StartDate", typeof(string));
                             dataTable.Columns.Add("EndDate", typeof(string));
 
@@ -836,6 +858,7 @@ namespace ads.Repository
                                 row["Ads"] = rawData.Ads;
                                 row["StartDate"] = rawData.StartDate;
                                 row["EndDate"] = rawData.EndDate;
+                                row["OverallSales"] = rawData.OverallSales;
                                 dataTable.Rows.Add(row);
                             }
                             await bulkCopy.WriteToServerAsync(dataTable);
