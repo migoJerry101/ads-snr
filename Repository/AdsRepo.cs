@@ -535,49 +535,98 @@ namespace ads.Repository
             var AdsDate = date.AddDays(-2);
             var CurrentDateWithZeroTime = new DateTime(currentDate.Year, currentDate.Month, currentDate.Day, 0, 0, 0, 0);
             var adsStartDate = new DateTime(AdsDate.Year, AdsDate.Month, AdsDate.Day, 0, 0, 0, 0);
+            string format = "yyyy-MM-dd HH:mm:ss.fff";
 
             var adsChain = await _totalAdsChainRepo.GetTotalAdsChainByDate($"{adsStartDate:yyyy-MM-dd HH:mm:ss.fff}");
-            string format = "yyyy-MM-dd HH:mm:ss.fff";
+            var adsDayZeorChain = adsChain.Count > 0 ? adsChain[0].EndDate : $"{CurrentDateWithZeroTime:yyyy-MM-dd HH:mm:ss.fff}";
+            var numberOfDayZeroChain = DateComputeUtility.GetDifferenceInRange($"{adsStartDate:yyyy-MM-dd HH:mm:ss.fff}", adsDayZeorChain) - 56;
+            var numberOfDayZeroChainFinal = numberOfDayZeroChain >= 0 ? numberOfDayZeroChain : 0;
+
+            //get list of day zeros for Chain
+            DateTime.TryParseExact(adsDayZeorChain, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime endDateOutTotal);
+            var listOfDayZeroChain = DateComputeUtility.GetDatesAndDaysAfter(endDateOutTotal, numberOfDayZeroChainFinal);
 
             //get ads clubs to get the longest range of date
             var adsPerClubs = await _totalAdsClubRepo.GetTotalAdsClubsByDate($"{adsStartDate:yyyy-MM-dd HH:mm:ss.fff}");
             var adsDayZeorClubs = adsPerClubs.Count > 0 ? adsPerClubs[0].EndDate : $"{CurrentDateWithZeroTime:yyyy-MM-dd HH:mm:ss.fff}";
-            var numberOfDayZero = DateComputeUtility.GetDifferenceInRange($"{adsStartDate:yyyy-MM-dd HH:mm:ss.fff}", adsDayZeorClubs)-56;
-            var numberOfDayZeroFinal = numberOfDayZero >= 0 ? numberOfDayZero : 0;
+            var numberOfDayZeroClubs = DateComputeUtility.GetDifferenceInRange($"{adsStartDate:yyyy-MM-dd HH:mm:ss.fff}", adsDayZeorClubs)-56;
+            var numberOfDayZeroFinal = numberOfDayZeroClubs >= 0 ? numberOfDayZeroClubs : 0;
 
             DateTime.TryParseExact(adsDayZeorClubs, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime endDateOut);
-
-            var test = adsPerClubs.Where(x => x.Divisor > 56);
-            //get list of day zeros
             var listOfDayZero = DateComputeUtility.GetDatesAndDaysAfter(endDateOut, numberOfDayZeroFinal);
 
+            listOfDayZero.AddRange(listOfDayZeroChain);
+
+            var listOfDayZeroBoth = listOfDayZero.Distinct().ToList();
+
+            var adsChainWithCompleteDivisor = adsChain.Where(x =>
+            {
+                DateTime.TryParseExact(x.EndDate, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime adsItemEndDate);
+                var isMember = x.Divisor == 56 && listOfDayZero.Contains(adsItemEndDate);
+
+                return isMember;
+            });
+
+            var groupedAdsChain = adsChainWithCompleteDivisor
+                .GroupBy(x => x.EndDate)
+                .ToDictionary(
+                    group => group.Key,
+                    group =>  group.Select(item => item.Sku).ToList()
+             );
+
+            var adsPerClubsWithCompleteDivisor = adsPerClubs.Where(x =>
+            {
+                DateTime.TryParseExact(x.EndDate, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime adsItemEndDate);
+                var isMember = x.Divisor == 56 && listOfDayZero.Contains(adsItemEndDate);
+
+                return isMember;
+            });
+
+            var dictionaryListOfSkuClubs = adsPerClubsWithCompleteDivisor
+                .GroupBy(x => x.EndDate)
+                .ToDictionary(
+                    group => group.Key,
+                    group =>  group.Select(item => item.Sku).ToList()
+                );
+
+            var mergedDictionarySku= dictionaryListOfSkuClubs
+                .Concat(groupedAdsChain)
+                .GroupBy(kvp => kvp.Key)
+                .ToDictionary(
+                    grp => grp.Key,
+                    grp => grp.SelectMany(kvp => kvp.Value).Distinct().ToList()
+                );
             //sales for chain
             var SalesToday = await _sales.GetSalesByDateEf(CurrentDateWithZeroTime); //to add
 
-            //get sales for multiple day Zero
-            var salesDayZeroes = await _sales.GetSalesByDates(listOfDayZero);// to subtract
 
-            //get inventory for multiple dat zero
+            //sales and inventory for day zero chain
+            var salesZeroChain = await _sales.GetSalesWithFilteredSku(mergedDictionarySku, listOfDayZeroBoth);
+            var inventoryZeorChain = await _invetory.GetInventoriesWithFilteredSku(mergedDictionarySku, listOfDayZeroBoth);
+
+            //sales for chain
+            var salesToday = await _sales.GetSalesByDateAndClub(CurrentDateWithZeroTime); //to add
 
             //sales for clubs
-            var salesTodayWithoutNullClubs = SalesToday.Where(i => !i.Clubs.IsNullOrEmpty());
-            var salesDayZeroWithoutNullClubs = salesDayZeroes.Where(i => !i.Clubs.IsNullOrEmpty());
+            var salesTodayWithoutNullClubs = salesToday.Where(i => !i.Clubs.IsNullOrEmpty());
+            var salesDayZeroWithoutNullClubs = salesZeroChain.Where(i => !i.Clubs.IsNullOrEmpty());
 
             //getInventory today and dayzero
+            var inventoryToday = await _invetory.GetInventoriesByDateAndClubs(CurrentDateWithZeroTime);
             var inventoryToday = await _invetory.GetInventoriesByDateEf(CurrentDateWithZeroTime);
             var inventoryDayZeroes = await _invetory.GetInventoriesByDates(listOfDayZero);
 
-            var inventoryDayZeroWithoutNullClubs = inventoryDayZeroes.Where(i => !i.Clubs.IsNullOrEmpty());
+            var inventoryDayZeroWithoutNullClubs = inventoryZeorChain.Where(i => !i.Clubs.IsNullOrEmpty());
             var inventoryTodayWithoutNullClubs = inventoryToday.Where(c => !c.Clubs.IsNullOrEmpty());
 
             var skuDictionary = skus.Distinct().ToDictionary(x => x);
             var chainDictionary = adsChain.Distinct().ToDictionary(c => c.Sku, y => y);
 
-            var salesTotalDictionaryToday = _sales.GetDictionayOfTotalSales(SalesToday);
-            var salesTotalDictionaryDayZero = _sales.GetDictionayOfTotalSalesWithSalesKey(salesDayZeroes);
+            var salesTotalDictionaryToday = _sales.GetDictionayOfTotalSales(salesToday);
+            var salesTotalDictionaryDayZero = _sales.GetDictionayOfTotalSalesWithSalesKey(salesZeroChain);
 
             var inventoryTotalDictionaryToday = _invetory.GetDictionayOfTotalInventory(inventoryToday);
-            var inventoryTodayDictionaryDayZero = _invetory.GetDictionayOfTotalInventory(inventoryDayZeroes);
+            var inventoryTodayDictionaryDayZero = _invetory.GetDictionayOfTotalInventory(inventoryZeorChain);
 
             var adsWithCurrentSales = new List<TotalAdsChain>();
 

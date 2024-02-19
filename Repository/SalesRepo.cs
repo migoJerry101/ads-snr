@@ -410,7 +410,7 @@ namespace ads.Repository
 
             return filteredSales;
         }
-
+        
         public async Task<List<Sale>> GetSalesByDate(DateTime date)
         {
             List<Sale> list = new List<Sale>();
@@ -602,6 +602,52 @@ namespace ads.Repository
                     StartLog = startLog,
                     EndLog = endLogs,
                     Action = "GetDictionayOfTotalSalesWithSalesKey",
+                    Message = error.Message,
+                    Record_Date = endLogs
+                });
+
+                _logs.InsertLogs(logs);
+
+                throw;
+            }
+        }
+
+        public async Task<List<Sale>> GetSalesWithFilteredSku(Dictionary<string, List<string>> sku, List<DateTime> days)
+        {
+            var startLog = DateTime.Now;
+
+            try
+            {
+                var sales = new List<Sale>();
+
+                foreach (var day in days)
+                {
+                    var hasSku = sku.TryGetValue($"{day:yyyy-MM-dd HH:mm:ss.fff}", out var skuOut);
+
+                    if (hasSku)
+                    {
+                        var distinctSku = skuOut.Distinct().ToList();
+
+                        var salesToday = await _adsContex.Sales
+                            .Where(x => x.Date == day && distinctSku.Contains(x.Sku))
+                            .ToListAsync();
+
+                        sales.AddRange(salesToday);
+                    }
+                }
+
+                return sales;
+            }
+            catch (Exception error)
+            {
+                var logs = new List<Logging>();
+                var endLogs = DateTime.Now;
+
+                logs.Add(new Logging
+                {
+                    StartLog = startLog,
+                    EndLog = endLogs,
+                    Action = "GetSalesWithFilteredSku",
                     Message = error.Message,
                     Record_Date = endLogs
                 });
