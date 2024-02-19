@@ -612,9 +612,7 @@ namespace ads.Repository
             var salesDayZeroWithoutNullClubs = salesZeroChain.Where(i => !i.Clubs.IsNullOrEmpty());
 
             //getInventory today and dayzero
-            var inventoryToday = await _invetory.GetInventoriesByDateAndClubs(CurrentDateWithZeroTime);
             var inventoryToday = await _invetory.GetInventoriesByDateEf(CurrentDateWithZeroTime);
-            var inventoryDayZeroes = await _invetory.GetInventoriesByDates(listOfDayZero);
 
             var inventoryDayZeroWithoutNullClubs = inventoryZeorChain.Where(i => !i.Clubs.IsNullOrEmpty());
             var inventoryTodayWithoutNullClubs = inventoryToday.Where(c => !c.Clubs.IsNullOrEmpty());
@@ -825,11 +823,11 @@ namespace ads.Repository
 
                         adsOut.Sales += perClubSalesToday;
                         adsOut.Ads = adsOut.Divisor != 0 ? Math.Round(adsOut.Sales / adsOut.Divisor, 2) : 0;
-                        adsOut.OverallSales = 0;
                         //implement after import of price are fix
                         //if (hasPrice) adsOut.OverallSales = adsOut.Sales * priceOut.Value;
                     }
 
+                    adsOut.OverallSales = 0;
                     adsOut.StartDate = startDateInString;
                     adsPerClubsWithCurrentsales.Add(adsOut);
                 }
@@ -893,9 +891,9 @@ namespace ads.Repository
                             dataTable.Columns.Add("Sales", typeof(decimal));
                             dataTable.Columns.Add("Divisor", typeof(int));
                             dataTable.Columns.Add("Ads", typeof(decimal));
-                            dataTable.Columns.Add("OverallSales", typeof(decimal));
                             dataTable.Columns.Add("StartDate", typeof(string));
                             dataTable.Columns.Add("EndDate", typeof(string));
+                            dataTable.Columns.Add("OverallSales", typeof(decimal));
 
                             foreach (var rawData in adsPerClubs)
                             {
@@ -907,7 +905,7 @@ namespace ads.Repository
                                 row["Ads"] = rawData.Ads;
                                 row["StartDate"] = rawData.StartDate;
                                 row["EndDate"] = rawData.EndDate;
-                                row["OverallSales"] = rawData.OverallSales;
+                                row["OverallSales"] = 0;
                                 dataTable.Rows.Add(row);
                             }
                             await bulkCopy.WriteToServerAsync(dataTable);

@@ -628,7 +628,7 @@ namespace ads.Repository
                     {
                         var distinctSku = skuOut.Distinct().ToList();
 
-                        var salesToday = await _adsContex.Sales
+                        var salesToday = await _adsContext.Sales
                             .Where(x => x.Date == day && distinctSku.Contains(x.Sku))
                             .ToListAsync();
 

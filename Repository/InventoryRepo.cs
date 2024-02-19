@@ -526,7 +526,7 @@ namespace ads.Repository
                     {
                         var distinct = skuOut.Distinct();
 
-                        var inventoriesToday = await _adsContex.Inventories
+                        var inventoriesToday = await _adsContext.Inventories
                             .Where(x => x.Date == day && distinct.Contains(x.Sku))
                             .ToListAsync();
 
