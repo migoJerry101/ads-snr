@@ -1,5 +1,6 @@
 ﻿using ads.Interface;
 using ads.Models.Dto.AdsChain;
+using ads.Utility;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 
@@ -47,6 +48,16 @@ namespace ads.Controllers
             var file = File(report, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "AdsReport.xlsx");
 
             return file;
+        }
+
+        [HttpPost]
+        [Route("UpdateClubTotalAverageSales")]
+        public async Task<ActionResult> UpdateClubTotalAverageSales(string date)
+        {
+            var dateFormat = DateConvertion.ConvertStringDate(date);
+            await _totalAdsClub.UpdateClubTotalAverageSales(dateFormat);
+
+            return Ok();
         }
     }
 }

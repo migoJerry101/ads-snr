@@ -7,23 +7,23 @@ namespace ads.Repository
 {
     public class ClubRepo : IClub
     {
-        private readonly AdsContex _contex;
+        private readonly AdsContext _context;
 
-        public ClubRepo(AdsContex contex)
+        public ClubRepo(AdsContext context)
         {
-            _contex = contex;
+            _context = context;
         }
 
         public async Task<List<Club>> GetAllClubs()
         {
-            var clubs = await _contex.Clubs.ToListAsync();
+            var clubs = await _context.Clubs.ToListAsync();
 
             return clubs;
         }
 
         public async Task<Dictionary<int, DateTime>> GetClubsDictionary()
         {
-            var clubs = await _contex.Clubs.ToListAsync();
+            var clubs = await _context.Clubs.ToListAsync();
             var dictionary = clubs.DistinctBy(x => x.Number).ToDictionary(x => x.Number, y => y.StartDate);
 
             return dictionary;

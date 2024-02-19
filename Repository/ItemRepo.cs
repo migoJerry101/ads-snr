@@ -7,22 +7,22 @@ namespace ads.Repository
 {
     public class ItemRepo : IItem
     {
-        private readonly AdsContex _adsContex;
+        private readonly AdsContext _adsContext;
 
-        public ItemRepo(AdsContex adsContex)
+        public ItemRepo(AdsContext adsContext)
         {
-            _adsContex = adsContex;
+            _adsContext = adsContext;
         }
         public async Task<List<string>> GetAllItemSku()
         {
-            var skus = await _adsContex.Items.Select(x => x.Sku.ToString()).ToListAsync();
+            var skus = await _adsContext.Items.Select(x => x.Sku.ToString()).ToListAsync();
 
             return skus;
         }
 
         public async Task<List<ItemSkuDateDto>> GetAllSkuWithDate()
         {
-            var items = await _adsContex.Items
+            var items = await _adsContext.Items
                 .Select(x =>
                     new ItemSkuDateDto()
                     { 

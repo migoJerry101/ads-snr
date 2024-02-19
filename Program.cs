@@ -23,6 +23,7 @@ builder.Services.AddScoped<IClub, ClubRepo>();
 builder.Services.AddScoped<IItem, ItemRepo>();
 builder.Services.AddScoped<IInventoryBackup, InventoryBackup>();
 builder.Services.AddScoped<IExcel, ExcelRepo>();
+builder.Services.AddScoped<IPrice, PriceRepo>();
 
 //Quartz run for cronjob
 builder.Services.AddQuartz(q =>
@@ -70,7 +71,7 @@ builder.Services.AddCors(options =>
     });
 });
 
-builder.Services.AddDbContextPool<AdsContex>(options =>
+builder.Services.AddDbContextPool<AdsContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DatabaseConnection"), sqlServerOptionsAction: sqlOptions =>
     {
         sqlOptions.CommandTimeout(999);
