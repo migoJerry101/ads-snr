@@ -20,7 +20,6 @@ namespace ads.Repository
         private readonly IItem _item;
         private readonly IClub _club;
 
-        //private readonly DateConvertion dateConvertion = new DateConvertion();
         public List<Inv> _inventoryList = new List<Inv>();
 
         public InventoryRepo(IOpenQuery openQuery, ILogs logs, AdsContext adsContext, IItem item, IClub club)

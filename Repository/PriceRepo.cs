@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Quartz.Util;
 using System;
+using System.Data;
 
 namespace ads.Repository;
 
@@ -19,12 +20,16 @@ public class PriceRepo : IPrice
     private readonly AdsContext _adsContext;
     private readonly ILogs _logs;
     private readonly IInventory _inventory;
+    private readonly IOpenQuery _openQuery;
+    private readonly IConfiguration _configuration;
 
-    public PriceRepo(AdsContext adsContext, ILogs logs, IInventory inventory)
+    public PriceRepo(AdsContext adsContext, ILogs logs, IInventory inventory, IOpenQuery openQuery, IConfiguration configuration)
     {
         _adsContext = adsContext;
         _logs = logs;
         _inventory = inventory;
+        _openQuery = openQuery;
+        _configuration = configuration;
     }
 
     public async Task GetHistoricalPriceFromCsv(DateTime dateTime)
@@ -59,7 +64,7 @@ public class PriceRepo : IPrice
 
                 if (totalSales > 0 && totalQtySold > 0)
                 {
-                    value = totalSales / totalQtySold; 
+                    value = totalSales / totalQtySold;
                 }
 
                 var price = new Price()
@@ -141,7 +146,7 @@ public class PriceRepo : IPrice
 
         try
         {
-            var pricesDto  = new List<PriceImportDto>();
+            var pricesDto = new List<PriceImportDto>();
 
             using (OledbCon db = new OledbCon())
             {
@@ -150,8 +155,7 @@ public class PriceRepo : IPrice
                 var inventories = await _inventory.GetEFInventoriesByDate(startLogs.AddDays(-1).Date);
                 var clubsDictionary = inventories
                     .Where(x => x.Clubs != string.Empty && x.Sku != string.Empty)
-                    .ToDictionary(x => new {x.Clubs ,x.Sku });
-
+                    .ToDictionary(x => new { x.Clubs, x.Sku });
 
                 var query = $@"SELECT * FROM OPENQUERY([snr],
                     'SELECT 
@@ -169,11 +173,11 @@ public class PriceRepo : IPrice
                 using var reader = await cmd.ExecuteReaderAsync();
 
                 while (await reader.ReadAsync())
-                {              
+                {
                     var Sku = reader["PISKU"].ToString();
                     var Clubs = reader["PSTR"].ToString();
 
-                    if (clubsDictionary.TryGetValue(new {Clubs,Sku}, out var inv) && !Sku.IsNullOrWhiteSpace() && !Clubs.IsNullOrWhiteSpace())
+                    if (clubsDictionary.TryGetValue(new { Clubs, Sku }, out var inv))
                     {
                         var currentPrice = reader["CURRENTPRICE"].ToString();
                         var isDecimal = decimal.TryParse(currentPrice, out var valueOut);
@@ -183,7 +187,7 @@ public class PriceRepo : IPrice
                             Sku = reader["PISKU"].ToString(),
                             Club = reader["PSTR"].ToString(),
                             Date = startLogs.Date,
-                            Value = valueOut > 0 ? valueOut : 0,
+                            Value = isDecimal ? valueOut : 0,
                         };
 
                         if (!pricesDto.Contains(price))
@@ -260,6 +264,55 @@ public class PriceRepo : IPrice
 
             _logs.InsertLogs(logs);
             throw;
+        }
+    }
+
+    public async Task DeletePriceByDate(DateTime date)
+    {
+        DateTime startLogs = DateTime.Now;
+        List<Logging> Log = new List<Logging>();
+
+        try
+        {
+            var strConn = _configuration["ConnectionStrings:DatabaseConnection"];
+            var con = new SqlConnection(strConn);
+
+            using (var command = new SqlCommand("_sp_DeletePriceByDate", con))
+            {
+                command.CommandType = CommandType.StoredProcedure;
+                command.Parameters.AddWithValue("@date", date);
+                command.CommandTimeout = 18000;
+                con.Open();
+
+                var reader = await command.ExecuteReaderAsync();
+
+                reader.Close(); 
+                con.Close();
+            }
+
+            Log.Add(new Logging
+            {
+                StartLog = startLogs,
+                EndLog = DateTime.Now,
+                Action = "DeletePriceByDate",
+                Message = $"Deleted Price with Date: {date}",
+                Record_Date = date
+            });
+
+            _logs.InsertLogs(Log);
+        }
+        catch (Exception error)
+        {
+            Log.Add(new Logging
+            {
+                StartLog = startLogs,
+                EndLog = DateTime.Now,
+                Action = "DeletePriceByDate",
+                Message = error.Message,
+                Record_Date = date
+            });
+
+            _logs.InsertLogs(Log);
         }
     }
 }

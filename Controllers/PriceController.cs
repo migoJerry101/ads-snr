@@ -48,5 +48,15 @@ namespace ads.Controllers
   
             return Ok();
         }
+
+        [HttpPost]
+        [Route("DeletePriceByDate")]
+        public async Task<IActionResult> DeletePriceByDate(string date)
+        {
+            var dateFormat = DateConvertion.ConvertStringDate(date);
+            await _price.DeletePriceByDate(dateFormat);
+
+            return Ok();
+        }
     }
 }

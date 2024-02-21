@@ -8,4 +8,5 @@ public interface IPrice
     Task BatchCreatePrices(IEnumerable<Price> data);
     Task FetchSalesFromMmsByDateAsync();
     Task<List<Price>> GetPricesByDateAsync(DateTime dateTime);
+    Task DeletePriceByDate(DateTime date);
 }
