@@ -85,6 +85,8 @@ namespace ads.Repository
                 }
 
                 await _ads.ComputeAds(currentDate.Date);
+                //import price for next day
+                //remove price 3days ago
             }
             catch (Exception e)
             {

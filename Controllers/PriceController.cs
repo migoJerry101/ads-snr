@@ -39,5 +39,14 @@ namespace ads.Controllers
 
             return Ok();
         }
+
+        [HttpPost]
+        [Route("FetchSalesFromMmsByDateAsync")]
+        public async Task<IActionResult> FetchSalesFromMmsByDateAsync()
+        {
+             await _price.FetchSalesFromMmsByDateAsync();
+  
+            return Ok();
+        }
     }
 }

@@ -8,6 +8,8 @@ using DocumentFormat.OpenXml.InkML;
 using DocumentFormat.OpenXml.Vml;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Quartz.Util;
 using System;
 
 namespace ads.Repository;
@@ -131,18 +133,34 @@ public class PriceRepo : IPrice
         }
     }
 
-    public async Task<List<Price>> FetchSalesFromMmsByDateAsync(DateTime dateTime)
+    public async Task FetchSalesFromMmsByDateAsync()
     {
         var startLogs = DateTime.Now;
         var logs = new List<Logging>();
+        var stringDate = startLogs.ToString("yyMMdd");
 
         try
         {
+            var pricesDto  = new List<PriceImportDto>();
+
             using (OledbCon db = new OledbCon())
             {
                 await db.OpenAsync();
 
-                const string query = "select * from Openquery([snr], 'SELECT INUMBR, IDESCR, IMCRDT from MMJDALIB.INVMST WHERE ISTYPE = ''01'' AND IDSCCD IN (''A'',''I'',''D'',''P'') AND IATRB1 IN (''L'',''I'',''LI'')')";
+                var inventories = await _inventory.GetEFInventoriesByDate(startLogs.AddDays(-1).Date);
+                var clubsDictionary = inventories
+                    .Where(x => x.Clubs != string.Empty && x.Sku != string.Empty)
+                    .ToDictionary(x => new {x.Clubs ,x.Sku });
+
+
+                var query = $@"SELECT * FROM OPENQUERY([snr],
+                    'SELECT 
+                        PISKU,
+                        MAX(PRET) as CURRENTPRICE,
+                        PSTR 
+                     FROM MMJDALIB.PRC_PF5 
+                     WHERE PDAT = {stringDate} and PRET != 0000000000.001  
+                     GROUP BY PISKU,PSTR')";
 
                 using SqlCommand cmd = new SqlCommand(query, db.Con);
 
@@ -151,11 +169,54 @@ public class PriceRepo : IPrice
                 using var reader = await cmd.ExecuteReaderAsync();
 
                 while (await reader.ReadAsync())
-                {
+                {              
+                    var Sku = reader["PISKU"].ToString();
+                    var Clubs = reader["PSTR"].ToString();
 
+                    if (clubsDictionary.TryGetValue(new {Clubs,Sku}, out var inv) && !Sku.IsNullOrWhiteSpace() && !Clubs.IsNullOrWhiteSpace())
+                    {
+                        var currentPrice = reader["CURRENTPRICE"].ToString();
+                        var isDecimal = decimal.TryParse(currentPrice, out var valueOut);
+
+                        var price = new PriceImportDto()
+                        {
+                            Sku = reader["PISKU"].ToString(),
+                            Club = reader["PSTR"].ToString(),
+                            Date = startLogs.Date,
+                            Value = valueOut > 0 ? valueOut : 0,
+                        };
+
+                        if (!pricesDto.Contains(price))
+                        {
+                            pricesDto.Add(price);
+                        }
+                    }
                 }
             }
-            return await _adsContext.Prices.ToListAsync();
+
+            var prices = pricesDto.Select(x => new Price()
+            {
+                Sku = x.Sku,
+                Date = x.Date,
+                Value = x.Value,
+                Club = x.Club,
+            });
+
+            await _adsContext.Prices.AddRangeAsync(prices);
+            await _adsContext.SaveChangesAsync();
+
+            var endLogs = DateTime.Now;
+
+            logs.Add(new Logging
+            {
+                StartLog = startLogs,
+                EndLog = endLogs,
+                Action = "FetchSalesFromMmsByDateAsync",
+                Message = $"inserted price: {prices.Count()}",
+                Record_Date = startLogs.Date
+            });
+
+            _logs.InsertLogs(logs);
         }
         catch (Exception error)
         {
@@ -171,7 +232,6 @@ public class PriceRepo : IPrice
             });
 
             _logs.InsertLogs(logs);
-            throw;
         }
     }
 
