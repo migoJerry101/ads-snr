@@ -599,7 +599,6 @@ namespace ads.Repository
             //sales for chain
             var SalesToday = await _sales.GetSalesByDateEf(CurrentDateWithZeroTime); //to add
 
-
             //sales and inventory for day zero chain
             var salesZeroChain = await _sales.GetSalesWithFilteredSku(mergedDictionarySku, listOfDayZeroBoth);
             var inventoryZeorChain = await _invetory.GetInventoriesWithFilteredSku(mergedDictionarySku, listOfDayZeroBoth);
@@ -736,8 +735,8 @@ namespace ads.Repository
             var totalAdsClubDictionary = adsPerClubs.ToDictionary(x => new { x.Sku, x.Clubs });
 
             //prices per clubs
-            //var price = await _price.GetPricesByDateAsync(date);
-            //var priceDictionary = price.ToDictionary(x => new PriceKey() { Club = x.Club, Sku = x.Sku });
+            var price = await _price.GetPricesByDateAsync(CurrentDateWithZeroTime);
+            var priceDictionary = price.ToDictionary(x => new PriceKey() { Club = x.Club, Sku = x.Sku });
 
             var salesTodayWithoutNullClubsDictionary = salesTodayWithoutNullClubs
                 .GroupBy(x => new { x.Sku, x.Clubs })
@@ -772,14 +771,12 @@ namespace ads.Repository
 
             foreach (var inv in inventoryTodayWithoutNullClubs)
             {
-                //------implement after import of price are fix
-                //var priceKey = new PriceKey()
-                //{
-                //    Sku = inv.Sku,
-                //    Club = inv.Clubs
-                //};
-                //var hasPrice = priceDictionary.TryGetValue(priceKey, out var priceOut);
-                //------implement after import of price are fix
+                var priceKey = new PriceKey()
+                {
+                    Sku = inv.Sku,
+                    Club = inv.Clubs
+                };
+                var hasPrice = priceDictionary.TryGetValue(priceKey, out var priceOut);
 
                 var hasAds = totalAdsClubDictionary.TryGetValue(new { inv.Sku, inv.Clubs }, out var adsOut);
                 var isAclub = clubsDictionary.TryGetValue(Convert.ToInt32(inv.Clubs), out var StartDate);
@@ -823,11 +820,9 @@ namespace ads.Repository
 
                         adsOut.Sales += perClubSalesToday;
                         adsOut.Ads = adsOut.Divisor != 0 ? Math.Round(adsOut.Sales / adsOut.Divisor, 2) : 0;
-                        //implement after import of price are fix
-                        //if (hasPrice) adsOut.OverallSales = adsOut.Sales * priceOut.Value;
                     }
 
-                    adsOut.OverallSales = 0;
+                    adsOut.OverallSales = hasPrice ? priceOut.Value * perClubSalesToday : 0;
                     adsOut.StartDate = startDateInString;
                     adsPerClubsWithCurrentsales.Add(adsOut);
                 }
@@ -847,7 +842,7 @@ namespace ads.Repository
                             Clubs = inv.Clubs,
                             StartDate = startDateInString,
                             EndDate = startDateInString,
-                            OverallSales = 0
+                            OverallSales = hasPrice ? priceOut.Value * perClubSalesToday : 0
                         };
 
                         if (inv.Inventory > 0 & perClubSalesToday >= 0)

@@ -30,15 +30,17 @@ namespace ads.Repository
         private readonly IAds _ads;
         private readonly IOpenQuery _openQuery;
         private readonly IItem _item;
+        private readonly IPrice _price;
         private readonly LogsRepo localQuery = new LogsRepo();
 
-        public CronJobsADSRepo(IInventory invetory, ISales sales, IAds ads, IOpenQuery openQuery, IItem item)
+        public CronJobsADSRepo(IInventory invetory, ISales sales, IAds ads, IOpenQuery openQuery, IItem item, IPrice price)
         {
             _inventory = invetory;
             _sales = sales;
             _ads = ads;
             _openQuery = openQuery;
             _item = item;
+            _price = price;
         }
 
         public async Task Execute(IJobExecutionContext context)
@@ -85,6 +87,10 @@ namespace ads.Repository
                 }
 
                 await _ads.ComputeAds(currentDate.Date);
+
+                var priceDateInString = currentDate.AddDays(-3);
+                await _price.FetchSalesFromMmsByDateAsync();
+                await _price.DeletePriceByDate(priceDateInString);
             }
             catch (Exception e)
             {

@@ -184,7 +184,10 @@ namespace ads.Repository
             try
             {
                 var price = await _price.GetPricesByDateAsync(date);
+                var sales = await _sales.GetSalesByDateEf(date);
+                var salesDictionary = sales.ToDictionary(x => new { x.Sku, x.Clubs }, x => x.Sales);
                 var priceDictionary = price.ToDictionary(x => new PriceKey() { Club = x.Club, Sku = x.Sku }, x => x);
+
                 var adsClubs = await _context.TotalAdsClubs.Where(x => x.StartDate == $"{date:yyyy-MM-dd HH:mm:ss.fff}").ToListAsync();
 
                 foreach (var adsClub in adsClubs)
@@ -196,7 +199,9 @@ namespace ads.Repository
                             Sku = adsClub.Sku
                         }, out var priceOut);
 
-                    if (hasPrice && priceOut is not null) adsClub.OverallSales = priceOut.Value * adsClub.Sales;
+                    var hasSales = salesDictionary.TryGetValue(new { adsClub.Sku, adsClub.Clubs }, out var salesOut);
+
+                    if (hasSales && hasPrice && priceOut is not null) adsClub.OverallSales = priceOut.Value * salesOut;
                 }
 
                 await _context.SaveChangesAsync();

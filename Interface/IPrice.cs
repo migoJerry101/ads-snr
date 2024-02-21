@@ -6,6 +6,7 @@ public interface IPrice
 {
     Task GetHistoricalPriceFromCsv(DateTime dateTime);
     Task BatchCreatePrices(IEnumerable<Price> data);
-    Task<List<Price>> FetchSalesFromMmsByDateAsync(DateTime dateTime);
+    Task FetchSalesFromMmsByDateAsync();
     Task<List<Price>> GetPricesByDateAsync(DateTime dateTime);
+    Task DeletePriceByDate(DateTime date);
 }
