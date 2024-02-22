@@ -32,8 +32,9 @@ namespace ads.Repository
         private readonly IItem _item;
         private readonly IPrice _price;
         private readonly LogsRepo localQuery = new LogsRepo();
+        private readonly ITotalAdsClub _totalAdsClub;
 
-        public CronJobsADSRepo(IInventory invetory, ISales sales, IAds ads, IOpenQuery openQuery, IItem item, IPrice price)
+        public CronJobsADSRepo(IInventory invetory, ISales sales, IAds ads, IOpenQuery openQuery, IItem item, IPrice price, ITotalAdsClub totalAdsClub)
         {
             _inventory = invetory;
             _sales = sales;
@@ -41,6 +42,7 @@ namespace ads.Repository
             _openQuery = openQuery;
             _item = item;
             _price = price;
+            _totalAdsClub = totalAdsClub;
         }
 
         public async Task Execute(IJobExecutionContext context)
@@ -64,7 +66,6 @@ namespace ads.Repository
             ////////Actual Record or Final Setup
             string startDate = previousDate.ToString("yyMMdd");
             string endDate = previousDate.ToString("yyMMdd");
-
 
             try
             {
@@ -90,7 +91,8 @@ namespace ads.Repository
 
                 var priceDateInString = currentDate.AddDays(-3);
                 await _price.FetchSalesFromMmsByDateAsync();
-                await _price.DeletePriceByDate(priceDateInString);
+                await _totalAdsClub.UpdateClubTotalAverageSales(previousDate.Date);
+                //await _price.DeletePriceByDate(priceDateInString);
             }
             catch (Exception e)
             {
