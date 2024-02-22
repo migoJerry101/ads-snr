@@ -185,7 +185,23 @@ namespace ads.Repository
             {
                 var price = await _price.GetPricesByDateAsync(date);
                 var sales = await _sales.GetSalesByDateEf(date);
-                var salesDictionary = sales.ToDictionary(x => new { x.Sku, x.Clubs }, x => x.Sales);
+                var salesDictionary = sales.
+                    GroupBy(x => new { x.Sku, x.Clubs })
+                    .ToDictionary(
+                         group => group.Key,
+                         group =>
+                         {
+                             var count = group.Count();
+
+                             if (count > 1)
+                             {
+                                 return group.Where(x => x.Sales >= 0).Sum(item => item.Sales);
+                             }
+
+                             return group.Sum(item => item.Sales);
+                         }
+                 );
+
                 var priceDictionary = price.ToDictionary(x => new PriceKey() { Club = x.Club, Sku = x.Sku }, x => x);
 
                 var adsClubs = await _context.TotalAdsClubs.Where(x => x.StartDate == $"{date:yyyy-MM-dd HH:mm:ss.fff}").ToListAsync();
