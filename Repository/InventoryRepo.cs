@@ -421,7 +421,7 @@ namespace ads.Repository
 
         public async Task<List<Inv>> GetEFInventoriesByDate(DateTime date)
         {
-            var inventories = await _adsContext.Inventories.Where(x => x.Date == date && x.Inventory > 0).ToListAsync();
+            var inventories = await _adsContext.Inventories.Where(x => x.Date == date).ToListAsync();
 
             return inventories;
         }
