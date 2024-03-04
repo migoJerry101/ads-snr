@@ -238,6 +238,5 @@ namespace ads.Repository
                 _logs.InsertLogs(Log);
             }
         }
-
     }
 }

@@ -902,13 +902,13 @@ namespace ads.Repository
                                 row["Ads"] = rawData.Ads;
                                 row["StartDate"] = rawData.StartDate;
                                 row["EndDate"] = rawData.EndDate;
-                                row["OverallSales"] = 0;
+                                row["OverallSales"] = rawData.OverallSales != null ? rawData.OverallSales : 0;
                                 dataTable.Rows.Add(row);
                             }
                             await bulkCopy.WriteToServerAsync(dataTable);
                         }
 
-                        transaction.Commit();
+                        await transaction.CommitAsync();
                     }
 
                     DateTime endLogs = DateTime.Now;
@@ -983,7 +983,7 @@ namespace ads.Repository
                             await bulkCopy.WriteToServerAsync(dataTable);
                         }
 
-                        transaction.Commit();
+                        await transaction.CommitAsync();
                     }
 
                     DateTime endLogs = DateTime.Now;
