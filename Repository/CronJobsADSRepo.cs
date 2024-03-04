@@ -91,7 +91,6 @@ namespace ads.Repository
 
                 var priceDateInString = currentDate.AddDays(-3);
                 await _price.FetchSalesFromMmsByDateAsync();
-                await _totalAdsClub.UpdateClubTotalAverageSales(previousDate.Date);
                 //await _price.DeletePriceByDate(priceDateInString);
             }
             catch (Exception e)
