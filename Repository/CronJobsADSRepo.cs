@@ -105,7 +105,7 @@ namespace ads.Repository
                     EndLog = endLogs,
                     Action = "Error",
                     Message = "Execute CronJobs : " + e.Message + "",
-                    Record_Date = DateConvertion.ConvertStringDate(startDate) 
+                    Record_Date = DateConvertion.ConvertStringDate(startDate)
                 });
 
                 localQuery.InsertLogs(Log);

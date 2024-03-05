@@ -600,14 +600,11 @@ namespace ads.Repository
                     grp => grp.SelectMany(kvp => kvp.Value).Distinct().ToList()
                 );
             //sales for chain
-            var SalesToday = await _sales.GetSalesByDateEf(CurrentDateWithZeroTime); //to add
+            var salesToday = await _sales.GetSalesByDateEf(CurrentDateWithZeroTime); //to add
 
             //sales and inventory for day zero chain
             var salesZeroChain = await _sales.GetSalesWithFilteredSku(mergedDictionarySku, listOfDayZeroBoth);
             var inventoryZeorChain = await _invetory.GetInventoriesWithFilteredSku(mergedDictionarySku, listOfDayZeroBoth);
-
-            //sales for chain
-            var salesToday = await _sales.GetSalesByDateAndClub(CurrentDateWithZeroTime); //to add
 
             //sales for clubs
             var salesTodayWithoutNullClubs = salesToday.Where(i => !i.Clubs.IsNullOrEmpty());

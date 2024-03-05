@@ -210,21 +210,7 @@ public class PriceRepo : IPrice
                 .Select(group => group.First())
                 .ToList();
 
-            await _adsContext.Prices.AddRangeAsync(prices);
-            await _adsContext.SaveChangesAsync();
-
-            var endLogs = DateTime.Now;
-
-            logs.Add(new Logging
-            {
-                StartLog = startLogs,
-                EndLog = endLogs,
-                Action = "FetchSalesFromMmsByDateAsync",
-                Message = $"inserted price: {prices.Count()}",
-                Record_Date = startLogs.Date
-            });
-
-            _logs.InsertLogs(logs);
+            await BulkCreatePrices(prices, startLogs.Date);
         }
         catch (Exception error)
         {
@@ -320,173 +306,72 @@ public class PriceRepo : IPrice
         }
     }
 
-    //public async Task GetPriceByDateProc()
-    //{
-    //    var startLogs = DateTime.Now;
-    //    var logs = new List<Logging>();
-    //    var pricesDto = new List<PriceImportDto>();
+    private async Task BulkCreatePrices(List<Price> prices, DateTime date)
+    {
+        var logs = new List<Logging>();
+        var startLogs = DateTime.Now;
 
-    //    var inventories = await _inventory.GetEFInventoriesByDate(startLogs.AddDays(-1).Date);
-    //    var clubsDictionary = inventories
-    //        .Where(x => x.Clubs != string.Empty && x.Sku != string.Empty)
-    //        .ToDictionary(x => new { x.Clubs, x.Sku });
+        try
+        {
+            using (OledbCon db = new OledbCon())
+            {
+                await db.OpenAsync();
 
-    //    var clubsWithInv = inventories.Where(x => x.Inventory > 0 && x.Clubs != string.Empty).Select(y => y.Clubs).ToList();
+                using (var transaction = db.Con.BeginTransaction())
+                {
+                    using (var bulkCopy = new SqlBulkCopy(db.Con, SqlBulkCopyOptions.Default, transaction))
+                    {
+                        bulkCopy.DestinationTableName = "tbl_Prices";
+                        bulkCopy.BatchSize = 1000;
 
-    //    var commaSeparatedClubs = string.Join(",", clubsWithInv);
+                        var dataTable = new DataTable();
+                        dataTable.Columns.Add("Id", typeof(int));
+                        dataTable.Columns.Add("Sku", typeof(string));
+                        dataTable.Columns.Add("Club", typeof(decimal));
+                        dataTable.Columns.Add("Value", typeof(int));
+                        dataTable.Columns.Add("Date", typeof(DateTime));
 
-    //    try
-    //    {
-    //        var strConn = _configuration["ConnectionStrings:DatabaseConnection"];
-    //        var con = new SqlConnection(strConn);
+                        foreach (var rawData in prices)
+                        {
+                            var row = dataTable.NewRow();
+                            row["Sku"] = rawData.Sku;
+                            row["Club"] = rawData.Club;
+                            row["Value"] = rawData.Value;
+                            row["Date"] = rawData.Date;
 
-    //        using (var command = new SqlCommand("_sp_GetPriceOpenQueryFromMmsWithFilter", con))
-    //        {
-    //            command.CommandType = CommandType.StoredProcedure;
-    //            command.Parameters.AddWithValue("@filter", commaSeparatedClubs);
-    //            command.CommandTimeout = 18000;
+                            dataTable.Rows.Add(row);
+                        }
+                        await bulkCopy.WriteToServerAsync(dataTable);
+                    }
 
-    //            var sd = new SqlDataAdapter(command);
-    //            DataTable dt = new DataTable();
-    //            con.Open();
-    //            sd.Fill(dt);
+                    await transaction.CommitAsync();
+                }
 
-    //            foreach (DataRow dr in dt.Rows)
-    //            {
-    //                var Sku = dr["PISKU"].ToString();
-    //                var Clubs = dr["PSTR"].ToString();
+                logs.Add(new Logging
+                {
+                    StartLog = startLogs,
+                    EndLog = DateTime.Now,
+                    Action = "BulkCreatePrices",
+                    Message = $"prices inserted : {prices.Count()}",
+                    Record_Date = date
+                });
 
-    //                if (clubsDictionary.TryGetValue(new { Clubs, Sku }, out var inv))
-    //                {
-    //                    var currentPrice = dr["CURRENTPRICE"].ToString();
-    //                    var isDecimal = decimal.TryParse(currentPrice, out var valueOut);
+                _logs.InsertLogs(logs);
+            }
+        }
+        catch (Exception e)
+        {
+            DateTime endLogs = DateTime.Now;
+            logs.Add(new Logging
+            {
+                StartLog = startLogs,
+                EndLog = endLogs,
+                Action = "BulkCreatePrices",
+                Message = e.Message,
+                Record_Date = date
+            });
 
-    //                    var price = new PriceImportDto()
-    //                    {
-    //                        Sku = Sku,
-    //                        Club = Clubs,
-    //                        Date = startLogs.Date,
-    //                        Value = isDecimal ? valueOut : 0,
-    //                    };
-
-    //                    if (!pricesDto.Contains(price))
-    //                    {
-    //                        pricesDto.Add(price);
-    //                    }
-
-    //                    clubsDictionary.Remove(new { Clubs, Sku });
-    //                }
-    //            }
-
-    //            con.Close();
-    //        }
-
-    //        var prices = pricesDto.Select(x => new Price()
-    //        {
-    //            Sku = x.Sku,
-    //            Date = x.Date,
-    //            Value = x.Value,
-    //            Club = x.Club,
-    //        }).ToList();
-
-    //        await BulkCreatePrices(prices, startLogs.Date);
-
-    //        var endLogs = DateTime.Now;
-
-    //        logs.Add(new Logging
-    //        {
-    //            StartLog = startLogs,
-    //            EndLog = endLogs,
-    //            Action = "FetchSalesFromMmsByDateAsync",
-    //            Message = $"inserted price: {prices.Count()}",
-    //            Record_Date = startLogs.Date
-    //        });
-
-    //        _logs.InsertLogs(logs);
-    //    }
-    //    catch (Exception error)
-    //    {
-    //        var endLogs = DateTime.Now;
-
-    //        logs.Add(new Logging
-    //        {
-    //            StartLog = startLogs,
-    //            EndLog = endLogs,
-    //            Action = "GetPricesByDateAsync",
-    //            Message = error.Message,
-    //            Record_Date = startLogs.Date
-    //        });
-
-    //        _logs.InsertLogs(logs);
-    //    }
-    //}
-
-    //private async Task BulkCreatePrices(List<Price> prices, DateTime date)
-    //{
-    //    var logs = new List<Logging>();
-    //    var startLogs = DateTime.Now;
-
-    //    try
-    //    {
-    //        using (OledbCon db = new OledbCon())
-    //        {
-    //            await db.OpenAsync();
-
-    //            using (var transaction = db.Con.BeginTransaction())
-    //            {
-    //                using (var bulkCopy = new SqlBulkCopy(db.Con, SqlBulkCopyOptions.Default, transaction))
-    //                {
-    //                    bulkCopy.DestinationTableName = "tbl_Prices";
-    //                    bulkCopy.BatchSize = 1000;
-
-    //                    var dataTable = new DataTable();
-    //                    dataTable.Columns.Add("Id", typeof(int));
-    //                    dataTable.Columns.Add("Sku", typeof(string));
-    //                    dataTable.Columns.Add("Club", typeof(decimal));
-    //                    dataTable.Columns.Add("Value", typeof(int));
-    //                    dataTable.Columns.Add("Date", typeof(DateTime));
-
-    //                    foreach (var rawData in prices)
-    //                    {
-    //                        var row = dataTable.NewRow();
-    //                        row["Sku"] = rawData.Sku;
-    //                        row["Club"] = rawData.Club;
-    //                        row["Value"] = rawData.Value;
-    //                        row["Date"] = rawData.Date;
-
-    //                        dataTable.Rows.Add(row);
-    //                    }
-    //                    await bulkCopy.WriteToServerAsync(dataTable);
-    //                }
-
-    //                transaction.Commit();
-    //            }
-
-    //            logs.Add(new Logging
-    //            {
-    //                StartLog = startLogs,
-    //                EndLog = DateTime.Now,
-    //                Action = "BulkCreatePrices",
-    //                Message = $"prices inserted : {prices.Count()}",
-    //                Record_Date = date
-    //            });
-
-    //            _logs.InsertLogs(logs);
-    //        }
-    //    }
-    //    catch (Exception e)
-    //    {
-    //        DateTime endLogs = DateTime.Now;
-    //        logs.Add(new Logging
-    //        {
-    //            StartLog = startLogs,
-    //            EndLog = endLogs,
-    //            Action = "BulkCreatePrices",
-    //            Message = e.Message,
-    //            Record_Date = date
-    //        });
-
-    //        _logs.InsertLogs(logs);
-    //    }
-    //}
+            _logs.InsertLogs(logs);
+        }
+    }
 }
