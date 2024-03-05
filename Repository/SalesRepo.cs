@@ -410,7 +410,7 @@ namespace ads.Repository
 
             return filteredSales;
         }
-        
+
         public async Task<List<Sale>> GetSalesByDate(DateTime date)
         {
             List<Sale> list = new List<Sale>();
@@ -578,7 +578,7 @@ namespace ads.Repository
             try
             {
                 var salesDictionary = sales
-                    .GroupBy(x => new SalesKey() { Date = x.Date, Sku = x.Sku})
+                    .GroupBy(x => new SalesKey() { Date = x.Date, Sku = x.Sku })
                     .ToDictionary(
                      group => group.Key,
                      group =>
@@ -586,7 +586,7 @@ namespace ads.Repository
                          var count = group.Count();
 
                          if (count > 1) return group.Where(x => x.Sales >= 0).Sum(item => item.Sales);
-                         
+
                          return group.Sum(item => item.Sales);
                      });
 
