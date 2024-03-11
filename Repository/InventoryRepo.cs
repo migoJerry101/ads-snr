@@ -368,7 +368,7 @@ namespace ads.Repository
             var clubs = await _club.GetAllClubs();
             var clubCode = clubs.Select(x => x.Number.ToString()).ToList();
             var inventories = await _adsContext.Inventories
-                 .AsNoTracking()
+                .AsNoTracking()
                 .Where(x => x.Date == date)
                 .Select(y => new InventoryDto()
                 {
@@ -378,6 +378,7 @@ namespace ads.Repository
                     Sku = y.Sku
                 })
                 .ToListAsync();
+
             var filterdInventories = inventories.Where(x => x.Clubs.IsNullOrEmpty() || clubCode.Contains(x.Clubs)).ToList();
 
             return filterdInventories;
@@ -442,7 +443,9 @@ namespace ads.Repository
 
         public async Task<List<Inv>> GetEFInventoriesByDate(DateTime date)
         {
-            var inventories = await _adsContext.Inventories.Where(x => x.Date == date).ToListAsync();
+            var inventories = await _adsContext.Inventories
+                .AsNoTracking()
+                .Where(x => x.Date == date).ToListAsync();
 
             return inventories;
         }

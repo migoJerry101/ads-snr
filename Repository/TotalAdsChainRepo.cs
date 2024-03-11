@@ -37,6 +37,7 @@ namespace ads.Repository
         public async Task<List<AdsChainCreateDto>> GetTotalAdsChainByDate(string date)
         {
             var ads = await _context.TotalAdsChains
+                .AsNoTracking()
                 .Where(x => x.StartDate == date)
                 .Select(a => new AdsChainCreateDto()
                 {
@@ -114,6 +115,7 @@ namespace ads.Repository
                     var inventoriesDictionary = _inventory.GetDictionayOfTotalInventory(inventories);
 
                     var adsChain = await _context.TotalAdsChains
+                        .AsNoTracking()
                         .Where(x => x.StartDate == $"{currentDate:yyyy-MM-dd HH:mm:ss.fff}")
                         .OrderBy(z => z.Sku)
                         .Select(y =>

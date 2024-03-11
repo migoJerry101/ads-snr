@@ -58,19 +58,19 @@ namespace ads.Repository
         public async Task<List<AdsClubCreateDto>> GetTotalAdsClubsByDate(string date)
         {
             var ads = await _context.TotalAdsClubs
-                .Where(x => x.StartDate == date)
                 .AsNoTracking()
-                    .Select(y => new AdsClubCreateDto()
-                    {
-                        Ads = y.Ads,
-                        Clubs = y.Clubs,
-                        Divisor = y.Divisor,
-                        StartDate = y.StartDate,
-                        Sku = y.Sku,
-                        EndDate = y.EndDate,
-                        OverallSales = y.OverallSales ?? 0,
-                        Sales = y.Sales
-                    })
+                .Where(x => x.StartDate == date)
+                .Select(y => new AdsClubCreateDto()
+                {
+                    Ads = y.Ads,
+                    Clubs = y.Clubs,
+                    Divisor = y.Divisor,
+                    StartDate = y.StartDate,
+                    Sku = y.Sku,
+                    EndDate = y.EndDate,
+                    OverallSales = y.OverallSales ?? 0,
+                    Sales = y.Sales
+                })
                 .OrderBy(y => y.EndDate)
                 .ToListAsync();
 
