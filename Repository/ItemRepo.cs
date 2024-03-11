@@ -23,6 +23,7 @@ namespace ads.Repository
         public async Task<List<ItemSkuDateDto>> GetAllSkuWithDate()
         {
             var items = await _adsContext.Items
+                .AsNoTracking()
                 .Select(x =>
                     new ItemSkuDateDto()
                     { 

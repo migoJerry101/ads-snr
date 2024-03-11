@@ -23,7 +23,10 @@ namespace ads.Repository
 
         public async Task<Dictionary<int, DateTime>> GetClubsDictionary()
         {
-            var clubs = await _context.Clubs.ToListAsync();
+            var clubs = await _context.Clubs
+                .AsNoTracking()
+                .ToListAsync();
+
             var dictionary = clubs.DistinctBy(x => x.Number).ToDictionary(x => x.Number, y => y.StartDate);
 
             return dictionary;

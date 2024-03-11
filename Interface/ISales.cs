@@ -12,14 +12,14 @@ namespace ads.Interface
         string TotalSales(string startDate, string endDate);
         Task<int> CountSales(string dateListString, OledbCon db);
         Task<List<Sale>> GetSalesByDate(DateTime date);
-        Dictionary<string, decimal> GetDictionayOfTotalSales(List<Sale> sales);
+        Dictionary<string, decimal> GetDictionayOfTotalSales(List<SalesDto> sales);
         Task DeleteSalesByDateAsync(DateTime date);
-        List<Sale> GetAdjustedSalesValue(List<Sale> sales, IEnumerable<Sale> reImportedSales);
-        Task<List<Sale>> GetSalesByDateEf(DateTime date);
+        List<SalesDto> GetAdjustedSalesValue(List<SalesDto> sales, IEnumerable<Sale> reImportedSales);
+        Task<List<SalesDto>> GetSalesByDateEf(DateTime date);
         void DeleteSalesByDate(DateTime date);
-        Task<List<Sale>> GetSalesByDateAndClub(DateTime date);
+        Task<List<SalesDto>> GetSalesByDateAndClub(DateTime date);
         Task<List<Sale>> GetSalesByDates(List<DateTime> dates);
-        Dictionary<SalesKey, decimal> GetDictionayOfTotalSalesWithSalesKey(List<Sale> sales);
-        Task<List<Sale>> GetSalesWithFilteredSku(Dictionary<string, List<string>> sku, List<DateTime> days);
+        Dictionary<SalesKey, decimal> GetDictionayOfTotalSalesWithSalesKey(List<SalesDto> sales);
+        Task<List<SalesDto>> GetSalesWithFilteredSku(Dictionary<string, List<string>> sku, List<DateTime> days);
     }
 }

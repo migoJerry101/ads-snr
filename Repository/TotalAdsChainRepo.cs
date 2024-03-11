@@ -34,10 +34,20 @@ namespace ads.Repository
             return totalAdsChain;
         }
 
-        public async Task<List<TotalAdsChain>> GetTotalAdsChainByDate(string date)
+        public async Task<List<AdsChainCreateDto>> GetTotalAdsChainByDate(string date)
         {
             var ads = await _context.TotalAdsChains
+                .AsNoTracking()
                 .Where(x => x.StartDate == date)
+                .Select(a => new AdsChainCreateDto()
+                {
+                    Sales = a.Sales,
+                    Ads = a.Ads,
+                    Divisor = a.Divisor,
+                    EndDate = a.EndDate,
+                    Sku = a.Sku,
+                    StartDate =a.StartDate
+                })
                 .OrderBy(y => y.EndDate)
                 .ToListAsync();
 
@@ -105,6 +115,7 @@ namespace ads.Repository
                     var inventoriesDictionary = _inventory.GetDictionayOfTotalInventory(inventories);
 
                     var adsChain = await _context.TotalAdsChains
+                        .AsNoTracking()
                         .Where(x => x.StartDate == $"{currentDate:yyyy-MM-dd HH:mm:ss.fff}")
                         .OrderBy(z => z.Sku)
                         .Select(y =>

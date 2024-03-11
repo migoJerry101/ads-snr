@@ -1,6 +1,8 @@
 ﻿using ads.Data;
 using ads.Interface;
 using ads.Models.Data;
+using ads.Models.Dto.AdsChain;
+using ads.Models.Dto.AdsClub;
 using ads.Models.Dto.Price;
 using ads.Models.Dto.Sale;
 using ads.Utility;
@@ -625,7 +627,7 @@ namespace ads.Repository
             var inventoryTotalDictionaryToday = _invetory.GetDictionayOfTotalInventory(inventoryToday);
             var inventoryTodayDictionaryDayZero = _invetory.GetDictionayOfTotalInventory(inventoryZeorChain);
 
-            var adsWithCurrentSales = new List<TotalAdsChain>();
+            var adsWithCurrentSales = new List<AdsChainCreateDto>();
 
             var startDateInString = $"{CurrentDateWithZeroTime:yyyy-MM-dd HH:mm:ss.fff}";
             //var endDateInString = $"{endDateOut:yyyy-MM-dd HH:mm:ss.fff}";
@@ -675,7 +677,7 @@ namespace ads.Repository
             }
 
             var adsWithCurrentsalesDictionary = adsWithCurrentSales.ToDictionary(x => x.Sku, y => y);
-            adsWithCurrentSales = new List<TotalAdsChain>();
+            adsWithCurrentSales = new List<AdsChainCreateDto>();
 
             foreach (var item in itemsToday)
             {
@@ -709,7 +711,7 @@ namespace ads.Repository
                 {
                     if (totalInvOut > 0 & totalSalesOut > 0 & isItemToday)
                     {
-                        var newAds = new TotalAdsChain()
+                        var newAds = new AdsChainCreateDto()
                         {
                             Divisor = 0,
                             Sales = totalSalesOut,
@@ -764,7 +766,7 @@ namespace ads.Repository
                     group.Key,
                     group => group.Sum(i => i.Inventory));
 
-            var adsPerClubsWithCurrentsales = new List<TotalAdsClub>();
+            var adsPerClubsWithCurrentsales = new List<AdsClubCreateDto>();
             var clubsDictionary = await _club.GetClubsDictionary();
 
             foreach (var inv in inventoryTodayWithoutNullClubs)
@@ -832,7 +834,7 @@ namespace ads.Repository
 
                     if (inv.Inventory > 0 & perClubSalesToday > 0 & isItemToday)
                     {
-                        var newAds = new TotalAdsClub()
+                        var newAds = new AdsClubCreateDto()
                         {
                             Divisor = 0,
                             Sales = perClubSalesToday,
@@ -860,7 +862,7 @@ namespace ads.Repository
             await SaveAdsPerClubs(adsPerClubsWithCurrentsales, recordDate);
         }
 
-        private async Task SaveAdsPerClubs(List<TotalAdsClub> adsPerClubs, DateTime lastDate)
+        private async Task SaveAdsPerClubs(List<AdsClubCreateDto> adsPerClubs, DateTime lastDate)
         {
             var Log = new List<Logging>();
             var startLogs = DateTime.Now;
@@ -937,7 +939,7 @@ namespace ads.Repository
             }
         }
 
-        private async Task SaveTotalAdsChain(List<TotalAdsChain> totalAds, DateTime lastDate)
+        private async Task SaveTotalAdsChain(List<AdsChainCreateDto> totalAds, DateTime lastDate)
         {
             var Log = new List<Logging>();
             var startLogs = DateTime.Now;

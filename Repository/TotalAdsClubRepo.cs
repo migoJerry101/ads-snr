@@ -55,10 +55,22 @@ namespace ads.Repository
             return (paginatedAds, totalPages);
         }
 
-        public async Task<List<TotalAdsClub>> GetTotalAdsClubsByDate(string date)
+        public async Task<List<AdsClubCreateDto>> GetTotalAdsClubsByDate(string date)
         {
             var ads = await _context.TotalAdsClubs
+                .AsNoTracking()
                 .Where(x => x.StartDate == date)
+                .Select(y => new AdsClubCreateDto()
+                {
+                    Ads = y.Ads,
+                    Clubs = y.Clubs,
+                    Divisor = y.Divisor,
+                    StartDate = y.StartDate,
+                    Sku = y.Sku,
+                    EndDate = y.EndDate,
+                    OverallSales = y.OverallSales ?? 0,
+                    Sales = y.Sales
+                })
                 .OrderBy(y => y.EndDate)
                 .ToListAsync();
 
@@ -236,6 +248,41 @@ namespace ads.Repository
                 });
 
                 _logs.InsertLogs(Log);
+            }
+        }
+
+        public async Task<List<AdsClubCreateDto>> GetAdsClubs()
+        {
+            try
+            {
+                var newDate = DateTime.Now.AddDays(-1).Date;
+                var test = $"{newDate:yyyy-MM-dd HH:mm:ss.fff}";
+                var list2 = await _context.TotalAdsClubs
+                    .Where(x => x.StartDate == $"{newDate:yyyy-MM-dd HH:mm:ss.fff}")
+                    .AsNoTracking()
+                    .ToListAsync();
+
+                var list = await _context.TotalAdsClubs
+                    .Where(x => x.StartDate == $"{newDate:yyyy-MM-dd HH:mm:ss.fff}")
+                    .AsNoTracking()
+                    .Select(y => new AdsClubCreateDto()
+                    {
+                        Ads = y.Ads,
+                        Clubs = y.Clubs,
+                        Divisor = y.Divisor,
+                        StartDate = y.StartDate,
+                        Sku = y.Sku,
+                        EndDate = y.EndDate,
+                        OverallSales = y.OverallSales ?? 0,
+                        Sales = y.Sales
+                    }).ToListAsync();
+
+                return list;
+            }
+            catch (Exception error)
+            {
+
+                throw;
             }
         }
     }
