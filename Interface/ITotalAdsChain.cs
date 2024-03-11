@@ -7,7 +7,7 @@ namespace ads.Interface
     public interface ITotalAdsChain
     {
         TotalAdsChain GetTotalAdsChain();
-        Task<List<TotalAdsChain>> GetTotalAdsChainByDate(string date);
+        Task<List<AdsChainCreateDto>> GetTotalAdsChainByDate(string date);
         Task DeleteAdsChainAsync(string date);
         Task<IEnumerable<IGrouping<string, AdsChainReportDto>>> GenerateAdsChainReportDto(DateTime startDate, DateTime endDate);
     }

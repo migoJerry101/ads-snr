@@ -394,18 +394,36 @@ namespace ads.Repository
             return totalCount;
         }
 
-        public async Task<List<Sale>> GetSalesByDateEf(DateTime date)
+        public async Task<List<SalesDto>> GetSalesByDateEf(DateTime date)
         {
-            var sales = await _adsContext.Sales.Where(x => x.Date == date).ToListAsync();
+            var sales = await _adsContext.Sales
+                .AsNoTracking()
+                .Where(x => x.Date == date)
+                .Select(y => new SalesDto()
+                {
+                     Sku = y.Sku,
+                     Date = y.Date,
+                     Clubs = y.Clubs,
+                     Sales = y.Sales
+                }).ToListAsync();
 
             return sales;
         }
 
-        public async Task<List<Sale>> GetSalesByDateAndClub(DateTime date)
+        public async Task<List<SalesDto>> GetSalesByDateAndClub(DateTime date)
         {
             var clubs = await _club.GetAllClubs();
             var clubCode = clubs.Select(x => x.Number.ToString()).ToList();
-            var sales = await _adsContext.Sales.Where(x => x.Date == date).ToListAsync();
+            var sales = await _adsContext.Sales
+                .AsNoTracking()
+                .Where(x => x.Date == date)
+                .Select(y => new SalesDto()
+                {
+                    Sku = y.Sku,
+                    Date = y.Date,
+                    Clubs = y.Clubs,
+                    Sales = y.Sales
+                }).ToListAsync();
             var filteredSales = sales.Where(x => x.Clubs.IsNullOrEmpty() || clubCode.Contains(x.Clubs)).ToList();
 
             return filteredSales;
@@ -443,7 +461,7 @@ namespace ads.Repository
             return _saleList;
         }
 
-        public Dictionary<string, decimal> GetDictionayOfTotalSales(List<Sale> sales)
+        public Dictionary<string, decimal> GetDictionayOfTotalSales(List<SalesDto> sales)
         {
             var salesDictionary = sales.GroupBy(x => x.Sku).ToDictionary(
                  group => group.Key,
@@ -505,9 +523,9 @@ namespace ads.Repository
             }
         }
 
-        public List<Sale> GetAdjustedSalesValue(List<Sale> sales, IEnumerable<Sale> reImportedSales)
+        public List<SalesDto> GetAdjustedSalesValue(List<SalesDto> sales, IEnumerable<Sale> reImportedSales)
         {
-            var salesWithDiff = new List<Sale>();
+            var salesWithDiff = new List<SalesDto>();
             var currentSalesDitionary = sales.ToDictionary(x => new { x.Sku, x.Clubs, x.Date });
 
             foreach (var sale in reImportedSales)
@@ -571,7 +589,7 @@ namespace ads.Repository
             }
         }
 
-        public Dictionary<SalesKey, decimal> GetDictionayOfTotalSalesWithSalesKey(List<Sale> sales)
+        public Dictionary<SalesKey, decimal> GetDictionayOfTotalSalesWithSalesKey(List<SalesDto> sales)
         {
             var startLog = DateTime.Now;
 
@@ -612,13 +630,13 @@ namespace ads.Repository
             }
         }
 
-        public async Task<List<Sale>> GetSalesWithFilteredSku(Dictionary<string, List<string>> sku, List<DateTime> days)
+        public async Task<List<SalesDto>> GetSalesWithFilteredSku(Dictionary<string, List<string>> sku, List<DateTime> days)
         {
             var startLog = DateTime.Now;
 
             try
             {
-                var sales = new List<Sale>();
+                var sales = new List<SalesDto>();
 
                 foreach (var day in days)
                 {
@@ -629,7 +647,15 @@ namespace ads.Repository
                         var distinctSku = skuOut.Distinct().ToList();
 
                         var salesToday = await _adsContext.Sales
+                            .AsNoTracking()
                             .Where(x => x.Date == day && distinctSku.Contains(x.Sku))
+                            .Select(y => new SalesDto()
+                            {
+                                Sku = y.Sku,
+                                Date = y.Date,
+                                Clubs = y.Clubs,
+                                Sales = y.Sales
+                            })
                             .ToListAsync();
 
                         sales.AddRange(salesToday);

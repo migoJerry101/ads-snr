@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using ads.Models.Dto.ItemsDto;
 using System.Collections.Immutable;
 using ads.Models.Dto.Sale;
+using ads.Models.Dto.Inventory;
 
 namespace ads.Repository
 {
@@ -345,18 +346,38 @@ namespace ads.Repository
             return totalCount;
         }
 
-        public async Task<List<Inv>> GetInventoriesByDateEf(DateTime date)
+        public async Task<List<InventoryDto>> GetInventoriesByDateEf(DateTime date)
         {
-            var inventories = await _adsContext.Inventories.Where(x => x.Date == date).ToListAsync();
+            var inventories = await _adsContext.Inventories
+                .AsNoTracking()
+                .Where(x => x.Date == date)
+                .Select(y => new InventoryDto()
+                {
+                    Clubs = y.Clubs,
+                    Date = y.Date,
+                    Inventory = y.Inventory,
+                    Sku = y.Sku
+                })
+                .ToListAsync();
 
             return inventories;
         }
 
-        public async Task<List<Inv>> GetInventoriesByDateAndClubs(DateTime date)
+        public async Task<List<InventoryDto>> GetInventoriesByDateAndClubs(DateTime date)
         {
             var clubs = await _club.GetAllClubs();
             var clubCode = clubs.Select(x => x.Number.ToString()).ToList();
-            var inventories = await _adsContext.Inventories.Where(x => x.Date == date).ToListAsync();
+            var inventories = await _adsContext.Inventories
+                 .AsNoTracking()
+                .Where(x => x.Date == date)
+                .Select(y => new InventoryDto()
+                {
+                    Clubs = y.Clubs,
+                    Date = y.Date,
+                    Inventory = y.Inventory,
+                    Sku = y.Sku
+                })
+                .ToListAsync();
             var filterdInventories = inventories.Where(x => x.Clubs.IsNullOrEmpty() || clubCode.Contains(x.Clubs)).ToList();
 
             return filterdInventories;
@@ -392,7 +413,7 @@ namespace ads.Repository
             return _inventoryList;
         }
 
-        public Dictionary<SalesKey, decimal> GetDictionayOfTotalInventory(List<Inv> inventories)
+        public Dictionary<SalesKey, decimal> GetDictionayOfTotalInventory(List<InventoryDto> inventories)
         {
             var inventoryDictionary = inventories
                 .GroupBy(x => 
@@ -426,7 +447,7 @@ namespace ads.Repository
             return inventories;
         }
 
-        public async Task BatchUpdateInventoryBysales(List<Sale> updatedSales)
+        public async Task BatchUpdateInventoryBysales(List<SalesDto> updatedSales)
         {
             var startLog = DateTime.Now;
 
@@ -509,13 +530,13 @@ namespace ads.Repository
             }
         }
 
-        public async Task<List<Inv>> GetInventoriesWithFilteredSku(Dictionary<string, List<string>> sku, List<DateTime> days)
+        public async Task<List<InventoryDto>> GetInventoriesWithFilteredSku(Dictionary<string, List<string>> sku, List<DateTime> days)
         {
             var startLog = DateTime.Now;
 
             try
             {
-                var inventories = new List<Inv>();
+                var inventories = new List<InventoryDto>();
 
                 foreach (var day in days)
                 {
@@ -526,7 +547,15 @@ namespace ads.Repository
                         var distinct = skuOut.Distinct();
 
                         var inventoriesToday = await _adsContext.Inventories
+                            .AsNoTracking()
                             .Where(x => x.Date == day && distinct.Contains(x.Sku))
+                            .Select(y => new InventoryDto()
+                            {
+                                Clubs = y.Clubs,
+                                Date = y.Date,
+                                Inventory = y.Inventory,
+                                Sku = y.Sku
+                            })
                             .ToListAsync();
 
                         inventories.AddRange(inventoriesToday);

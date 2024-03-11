@@ -229,14 +229,24 @@ public class PriceRepo : IPrice
         }
     }
 
-    public async Task<List<Price>> GetPricesByDateAsync(DateTime dateTime)
+    public async Task<List<PriceDto>> GetPricesByDateAsync(DateTime dateTime)
     {
         var startLogs = DateTime.Now;
         var logs = new List<Logging>();
 
         try
         {
-            var prices = await _adsContext.Prices.Where(x => x.Date == dateTime).ToListAsync();
+            var prices = await _adsContext.Prices.Where(x => x.Date == dateTime)
+                .AsNoTracking()
+                .Select(y => new PriceDto()
+                {
+                    Club = y.Club,
+                    Sku = y.Sku,
+                    Date = y.Date,
+                    Value = y.Value
+                })
+                .ToListAsync();
+
             return prices;
         }
         catch (Exception error)

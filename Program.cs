@@ -35,7 +35,7 @@ builder.Services.AddQuartz(q =>
     q.AddTrigger(opts => opts
         .ForJob(jobKey)
         .WithIdentity("DataRepo-trigger")
-        .WithCronSchedule("01 00 03 * * ?"));
+        .WithCronSchedule("01 00 08 * * ?"));
 });
 
 
