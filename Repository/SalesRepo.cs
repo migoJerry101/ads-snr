@@ -429,6 +429,26 @@ namespace ads.Repository
             return filteredSales;
         }
 
+        public async Task<List<SalesDto>> GetSalesByDateAndClub(DateTime date, IEnumerable<int> Skus)
+        {
+            var skusAsString = Skus.Select(s => s.ToString()).ToList();
+            var clubs = await _club.GetAllClubs();
+            var clubCode = clubs.Select(x => x.Number.ToString()).ToList();
+            var sales = await _adsContext.Sales
+                .AsNoTracking()
+                .Where(x => x.Date == date && skusAsString.Contains(x.Sku))
+                .Select(y => new SalesDto()
+                {
+                    Sku = y.Sku,
+                    Date = y.Date,
+                    Clubs = y.Clubs,
+                    Sales = y.Sales
+                }).ToListAsync();
+            var filteredSales = sales.Where(x => x.Clubs.IsNullOrEmpty() || clubCode.Contains(x.Clubs)).ToList();
+
+            return filteredSales;
+        }
+
         public async Task<List<Sale>> GetSalesByDate(DateTime date)
         {
             List<Sale> list = new List<Sale>();

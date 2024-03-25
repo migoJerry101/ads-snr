@@ -9,7 +9,7 @@ namespace ads.Interface
         Task<(List<TotalAdsClub>, int totalPages)> GetPaginatedTotalAdsClubs(TotalAdsChainPaginationDto data);
         Task<List<AdsClubCreateDto>> GetTotalAdsClubsByDate(string date);
         Task DeleteAdsClubsAsync(string date);
-        Task<IEnumerable<IGrouping<string, AdsClubReportDto>>> GenerateAdsClubsReportDto(DateTime startDate, DateTime endDate);
+        Task<IEnumerable<IGrouping<string, AdsClubReportDto>>> GenerateAdsClubsReportDto(DateTime startDate, DateTime endDate, IEnumerable<int> skus);
         Task UpdateClubTotalAverageSales(DateTime date);
     }
 }

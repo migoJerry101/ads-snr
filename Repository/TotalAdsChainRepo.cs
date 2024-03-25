@@ -98,23 +98,42 @@ namespace ads.Repository
             }
         }
 
-        public async Task<IEnumerable<IGrouping<string, AdsChainReportDto>>> GenerateAdsChainReportDto(DateTime startDate, DateTime endDate)
+        public async Task<IEnumerable<IGrouping<string, AdsChainReportDto>>> GenerateAdsChainReportDto(DateTime startDate, DateTime endDate, IEnumerable<int> skus)
         {
             var adsChainReportDtos = new List<AdsChainReportDto>();
             var startLogs = DateTime.Now;
             var log = new List<Logging>();
+            var skusAsString = skus.Select(s => s.ToString()).ToList();
 
             try
             {
                 for (DateTime currentDate = endDate; startDate >= currentDate; currentDate = currentDate.AddDays(1))
                 {
-                    var sales = await _sales.GetSalesByDateAndClub(currentDate);
+                    var sales = skus.Count() > 0
+                        ? await _sales.GetSalesByDateAndClub(currentDate, skus)
+                        : await _sales.GetSalesByDateAndClub(currentDate);
                     var salesDictionary = _sales.GetDictionayOfTotalSales(sales);
 
-                    var inventories = await _inventory.GetInventoriesByDateAndClubs(currentDate);
+                    var inventories = skus.Count() > 0
+                        ? await _inventory.GetInventoriesByDateAndClubs(currentDate, skus)
+                        : await _inventory.GetInventoriesByDateAndClubs(currentDate);
                     var inventoriesDictionary = _inventory.GetDictionayOfTotalInventory(inventories);
 
-                    var adsChain = await _context.TotalAdsChains
+                    var adsChain = skus.Count() > 0
+                        ? await _context.TotalAdsChains
+                        .AsNoTracking()
+                        .Where(x => x.StartDate == $"{currentDate:yyyy-MM-dd HH:mm:ss.fff}" && skusAsString.Contains(x.Sku))
+                        .OrderBy(z => z.Sku)
+                        .Select(y =>
+                           new AdsChainReportDto
+                           {
+                               Divisor = y.Divisor,
+                               Ads = y.Ads,
+                               Date = currentDate.ToString("M/d/yyyy"),
+                               Sku = y.Sku
+                           })
+                        .ToListAsync()
+                        : await _context.TotalAdsChains
                         .AsNoTracking()
                         .Where(x => x.StartDate == $"{currentDate:yyyy-MM-dd HH:mm:ss.fff}")
                         .OrderBy(z => z.Sku)
@@ -145,7 +164,8 @@ namespace ads.Repository
 
                     adsChainReportDtos.AddRange(adsChain);
                 }
-                var groupedByData = adsChainReportDtos.GroupBy(x => x.Date);
+
+                var groupedByData = adsChainReportDtos.GroupBy(x => x.Sku);
 
                 return groupedByData;
             }

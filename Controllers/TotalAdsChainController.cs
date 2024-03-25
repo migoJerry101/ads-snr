@@ -1,8 +1,12 @@
 ﻿using ads.Interface;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ads.Controllers
 {
+    [Route("api/[controller]")]
+    [ApiController]
+    [EnableCors("AllowOrigin")]
     public class TotalAdsChainController : ControllerBase
     {
         private readonly ITotalAdsChain _totalAdsChain;
@@ -25,9 +29,9 @@ namespace ads.Controllers
 
         [HttpPost]
         [Route("GenerateChainReport")]
-        public async Task<IActionResult> GenerateChainReport(DateTime startDate, DateTime endDate)
+        public async Task<ActionResult> GenerateChainReport(DateTime startDate, DateTime endDate, IEnumerable<int> skus)
         {
-            var reportDtos = await _totalAdsChain.GenerateAdsChainReportDto(startDate, endDate);
+            var reportDtos = await _totalAdsChain.GenerateAdsChainReportDto(startDate, endDate, skus);
             var report = _excel.ExportDataToExcelByDate(reportDtos);
 
             var file = File(report, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "AdsReport.xlsx");

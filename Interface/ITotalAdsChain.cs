@@ -9,6 +9,6 @@ namespace ads.Interface
         TotalAdsChain GetTotalAdsChain();
         Task<List<AdsChainCreateDto>> GetTotalAdsChainByDate(string date);
         Task DeleteAdsChainAsync(string date);
-        Task<IEnumerable<IGrouping<string, AdsChainReportDto>>> GenerateAdsChainReportDto(DateTime startDate, DateTime endDate);
+        Task<IEnumerable<IGrouping<string, AdsChainReportDto>>> GenerateAdsChainReportDto(DateTime startDate, DateTime endDate, IEnumerable<int> skus);
     }
 }
