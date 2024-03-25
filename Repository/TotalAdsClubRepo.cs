@@ -121,25 +121,45 @@ namespace ads.Repository
             }
         }
 
-        public async Task<IEnumerable<IGrouping<string, AdsClubReportDto>>> GenerateAdsClubsReportDto(DateTime startDate, DateTime endDate)
+        public async Task<IEnumerable<IGrouping<string, AdsClubReportDto>>> GenerateAdsClubsReportDto(DateTime startDate, DateTime endDate, IEnumerable<int> skus)
         {
             var adsClubReportDtos = new List<AdsClubReportDto>();
             var startLogs = DateTime.Now;
             var log = new List<Logging>();
+            var skusAsString = skus.Select(s => s.ToString()).ToList();
 
             try
             {
                 for (DateTime currentDate = endDate; startDate >= currentDate; currentDate = currentDate.AddDays(1))
                 {
-                    var sales = await _sales.GetSalesByDateAndClub(currentDate);
+                    var sales = skus.Count() > 0 
+                        ? await _sales.GetSalesByDateAndClub(currentDate, skus) 
+                        :  await _sales.GetSalesByDateAndClub(currentDate);
                     var salesDictionary = sales
                         .GroupBy(x => (x.Sku, x.Clubs))
                         .ToDictionary(group => group.Key, group => group.Sum(y => y.Sales));
 
-                    var inventories = await _inventory.GetInventoriesByDateAndClubs(currentDate);
+                    var inventories = skus.Count() > 0 
+                        ? await _inventory.GetInventoriesByDateAndClubs(currentDate, skus) 
+                        : await _inventory.GetInventoriesByDateAndClubs(currentDate);
                     var inventoriesDictionary = inventories.ToDictionary(x => (x.Sku, x.Clubs), y => y.Inventory);
 
-                    var adsClubs = await _context.TotalAdsClubs
+                    var adsClubs = skus.Count() > 0 
+                        ? await _context.TotalAdsClubs
+                        .Where(x => x.StartDate == $"{currentDate:yyyy-MM-dd HH:mm:ss.fff}" && skusAsString.Contains(x.Sku))
+                        .OrderBy(z => z.Clubs)
+                        .OrderBy(a => a.Sku)
+                        .Select(y =>
+                           new AdsClubReportDto
+                           {
+                               Divisor = y.Divisor,
+                               Ads = y.Ads,
+                               Date = currentDate.ToString("M/d/yyyy"),
+                               Clubs = y.Clubs,
+                               Sku = y.Sku
+                           })
+                        .ToListAsync()
+                        : await _context.TotalAdsClubs
                         .Where(x => x.StartDate == $"{currentDate:yyyy-MM-dd HH:mm:ss.fff}")
                         .OrderBy(z => z.Clubs)
                         .OrderBy(a => a.Sku)
@@ -147,7 +167,7 @@ namespace ads.Repository
                            new AdsClubReportDto
                            {
                                Divisor = y.Divisor,
-                               Ads = y.Divisor,
+                               Ads = y.Ads,
                                Date = currentDate.ToString("M/d/yyyy"),
                                Clubs = y.Clubs,
                                Sku = y.Sku
@@ -166,7 +186,7 @@ namespace ads.Repository
                     adsClubReportDtos.AddRange(adsClubs);
                 }
 
-                var groupBy = adsClubReportDtos.GroupBy(x => x.Date);
+                var groupBy = adsClubReportDtos.GroupBy(x => x.Sku);
 
                 return groupBy;
             }

@@ -384,6 +384,28 @@ namespace ads.Repository
             return filterdInventories;
         }
 
+        public async Task<List<InventoryDto>> GetInventoriesByDateAndClubs(DateTime date, IEnumerable<int> skus)
+        {
+            var skusAsString = skus.Select(s => s.ToString()).ToList();
+            var clubs = await _club.GetAllClubs();
+            var clubCode = clubs.Select(x => x.Number.ToString()).ToList();
+            var inventories = await _adsContext.Inventories
+                .AsNoTracking()
+                .Where(x => x.Date == date && skusAsString.Contains(x.Sku))
+                .Select(y => new InventoryDto()
+                {
+                    Clubs = y.Clubs,
+                    Date = y.Date,
+                    Inventory = y.Inventory,
+                    Sku = y.Sku
+                })
+                .ToListAsync();
+
+            var filterdInventories = inventories.Where(x => x.Clubs.IsNullOrEmpty() || clubCode.Contains(x.Clubs)).ToList();
+
+            return filterdInventories;
+        }
+
         public async Task<List<Inv>> GetInventoriesByDate(DateTime date)
         {
             _inventoryList = new List<Inv>();

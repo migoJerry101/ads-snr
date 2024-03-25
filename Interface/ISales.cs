@@ -21,5 +21,6 @@ namespace ads.Interface
         Task<List<Sale>> GetSalesByDates(List<DateTime> dates);
         Dictionary<SalesKey, decimal> GetDictionayOfTotalSalesWithSalesKey(List<SalesDto> sales);
         Task<List<SalesDto>> GetSalesWithFilteredSku(Dictionary<string, List<string>> sku, List<DateTime> days);
+        Task<List<SalesDto>> GetSalesByDateAndClub(DateTime date, IEnumerable<int> Skus);
     }
 }

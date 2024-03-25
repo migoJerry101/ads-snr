@@ -39,9 +39,9 @@ namespace ads.Controllers
 
         [HttpPost]
         [Route("GenerateAdsClubsReportDto")]
-        public async Task<ActionResult> GenerateAdsClubsReportDto(DateTime startDate, DateTime endDate)
+        public async Task<ActionResult> GenerateAdsClubsReportDto(DateTime startDate, DateTime endDate, IEnumerable<int> skus)
         {
-            var reportDtos = await _totalAdsClub.GenerateAdsClubsReportDto(startDate, endDate);
+            var reportDtos = await _totalAdsClub.GenerateAdsClubsReportDto(startDate, endDate, skus);
 
             var report = _excel.ExportDataToExcelByDate(reportDtos);
 
