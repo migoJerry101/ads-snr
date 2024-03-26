@@ -126,40 +126,28 @@ namespace ads.Repository
             var adsClubReportDtos = new List<AdsClubReportDto>();
             var startLogs = DateTime.Now;
             var log = new List<Logging>();
-            var skusAsString = skus.Select(s => s.ToString()).ToList();
+            var skusAsString = skus.Select(s => s.ToString());
 
             try
             {
                 for (DateTime currentDate = endDate; startDate >= currentDate; currentDate = currentDate.AddDays(1))
                 {
-                    var sales = skus.Count() > 0 
-                        ? await _sales.GetSalesByDateAndClub(currentDate, skus) 
-                        :  await _sales.GetSalesByDateAndClub(currentDate);
-                    var salesDictionary = sales
+                    var sales =  await _sales.GetSalesByDateAndClub(currentDate);
+                    var filteredSales = skus.Count() > 0
+                        ? sales.Where(x => skusAsString.Contains(x.Sku)).ToList()
+                        : sales;
+                    var salesDictionary = filteredSales
                         .GroupBy(x => (x.Sku, x.Clubs))
                         .ToDictionary(group => group.Key, group => group.Sum(y => y.Sales));
 
-                    var inventories = skus.Count() > 0 
-                        ? await _inventory.GetInventoriesByDateAndClubs(currentDate, skus) 
-                        : await _inventory.GetInventoriesByDateAndClubs(currentDate);
-                    var inventoriesDictionary = inventories.ToDictionary(x => (x.Sku, x.Clubs), y => y.Inventory);
+                    var inventories = await _inventory.GetInventoriesByDateAndClubs(currentDate);
+                    var filteredInventories = skus.Count() > 0
+                        ? inventories.Where(x => skusAsString.Contains(x.Sku)).ToList()
+                        : inventories;
+                    var inventoriesDictionary = filteredInventories
+                        .ToDictionary(x => (x.Sku, x.Clubs), y => y.Inventory);
 
-                    var adsClubs = skus.Count() > 0 
-                        ? await _context.TotalAdsClubs
-                        .Where(x => x.StartDate == $"{currentDate:yyyy-MM-dd HH:mm:ss.fff}" && skusAsString.Contains(x.Sku))
-                        .OrderBy(z => z.Clubs)
-                        .OrderBy(a => a.Sku)
-                        .Select(y =>
-                           new AdsClubReportDto
-                           {
-                               Divisor = y.Divisor,
-                               Ads = y.Ads,
-                               Date = currentDate.ToString("M/d/yyyy"),
-                               Clubs = y.Clubs,
-                               Sku = y.Sku
-                           })
-                        .ToListAsync()
-                        : await _context.TotalAdsClubs
+                    var adsClubs = await _context.TotalAdsClubs
                         .Where(x => x.StartDate == $"{currentDate:yyyy-MM-dd HH:mm:ss.fff}")
                         .OrderBy(z => z.Clubs)
                         .OrderBy(a => a.Sku)
@@ -174,7 +162,11 @@ namespace ads.Repository
                            })
                         .ToListAsync();
 
-                    foreach (var adsItem in adsClubs)
+                    var filtered = skus.Count() > 0
+                        ? adsClubs.Where(x => skusAsString.Contains(x.Sku)).ToList()
+                        : adsClubs;
+
+                    foreach (var adsItem in filtered)
                     {
                         salesDictionary.TryGetValue((adsItem.Sku, adsItem.Clubs), out var salesToday);
                         inventoriesDictionary.TryGetValue((adsItem.Sku, adsItem.Clubs), out var InventoryToday);
@@ -183,7 +175,7 @@ namespace ads.Repository
                         adsItem.OnHand = InventoryToday;
                     }
 
-                    adsClubReportDtos.AddRange(adsClubs);
+                    adsClubReportDtos.AddRange(filtered);
                 }
 
                 var groupBy = adsClubReportDtos.GroupBy(x => x.Sku);
