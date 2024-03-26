@@ -109,31 +109,20 @@ namespace ads.Repository
             {
                 for (DateTime currentDate = endDate; startDate >= currentDate; currentDate = currentDate.AddDays(1))
                 {
-                    var sales = skus.Count() > 0
-                        ? await _sales.GetSalesByDateAndClub(currentDate, skus)
-                        : await _sales.GetSalesByDateAndClub(currentDate);
-                    var salesDictionary = _sales.GetDictionayOfTotalSales(sales);
+                    var sales = await _sales.GetSalesByDateAndClub(currentDate);
+                    var filteredSales = skus.Count() > 0
+                        ? sales.Where(x => skusAsString.Contains(x.Sku)).ToList() 
+                        : sales;
 
-                    var inventories = skus.Count() > 0
-                        ? await _inventory.GetInventoriesByDateAndClubs(currentDate, skus)
-                        : await _inventory.GetInventoriesByDateAndClubs(currentDate);
-                    var inventoriesDictionary = _inventory.GetDictionayOfTotalInventory(inventories);
+                    var inventories = await _inventory.GetInventoriesByDateAndClubs(currentDate);
+                    var filteredInventories = skus.Count() > 0
+                        ? inventories.Where(x => skusAsString.Contains(x.Sku)).ToList() 
+                        : inventories;
 
-                    var adsChain = skus.Count() > 0
-                        ? await _context.TotalAdsChains
-                        .AsNoTracking()
-                        .Where(x => x.StartDate == $"{currentDate:yyyy-MM-dd HH:mm:ss.fff}" && skusAsString.Contains(x.Sku))
-                        .OrderBy(z => z.Sku)
-                        .Select(y =>
-                           new AdsChainReportDto
-                           {
-                               Divisor = y.Divisor,
-                               Ads = y.Ads,
-                               Date = currentDate.ToString("M/d/yyyy"),
-                               Sku = y.Sku
-                           })
-                        .ToListAsync()
-                        : await _context.TotalAdsChains
+                    var salesDictionary = _sales.GetDictionayOfTotalSales(filteredSales);
+                    var inventoriesDictionary = _inventory.GetDictionayOfTotalInventory(filteredInventories);
+
+                    var adsChain = await _context.TotalAdsChains
                         .AsNoTracking()
                         .Where(x => x.StartDate == $"{currentDate:yyyy-MM-dd HH:mm:ss.fff}")
                         .OrderBy(z => z.Sku)
@@ -147,7 +136,11 @@ namespace ads.Repository
                            })
                         .ToListAsync();
 
-                    foreach (var adsItem in adsChain)
+                    var filteredAdsChain = skus.Count() > 0
+                        ? adsChain.Where(x => skusAsString.Contains(x.Sku)).ToList()
+                        : adsChain;
+
+                    foreach (var adsItem in filteredAdsChain)
                     {
                         var todayKey = new SalesKey()
                         {
@@ -162,7 +155,7 @@ namespace ads.Repository
                         adsItem.OnHand = InventoryToday;
                     }
 
-                    adsChainReportDtos.AddRange(adsChain);
+                    adsChainReportDtos.AddRange(filteredAdsChain);
                 }
 
                 var groupedByData = adsChainReportDtos.GroupBy(x => x.Sku);
