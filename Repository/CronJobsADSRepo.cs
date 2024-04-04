@@ -88,10 +88,6 @@ namespace ads.Repository
                 }
 
                 await _ads.ComputeAds(currentDate.Date);
-
-                var priceDateInString = currentDate.AddDays(-3);
-                await _price.FetchSalesFromMmsByDateAsync();
-                //await _price.DeletePriceByDate(priceDateInString);
             }
             catch (Exception e)
             {

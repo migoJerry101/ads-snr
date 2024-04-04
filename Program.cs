@@ -24,6 +24,7 @@ builder.Services.AddScoped<IItem, ItemRepo>();
 builder.Services.AddScoped<IInventoryBackup, InventoryBackup>();
 builder.Services.AddScoped<IExcel, ExcelRepo>();
 builder.Services.AddScoped<IPrice, PriceRepo>();
+builder.Services.AddScoped<ICondtx, CondtxRepo>();
 
 //Quartz run for cronjob
 builder.Services.AddQuartz(q =>
