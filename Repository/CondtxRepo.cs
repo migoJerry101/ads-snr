@@ -81,7 +81,7 @@ namespace ads.Repository
         public Dictionary<CondtxKey, decimal> GetTotalSalesDictionary(IEnumerable<CondtxDto> data)
         {
             var groupedByList = data
-                .GroupBy(x => new CondtxKey(){ Sku = x.Sku, Club =x.Club })
+                .GroupBy(x => new CondtxKey(){ Sku = x.Sku, Club = x.Club })
                 .ToDictionary(x => x.Key,
                 group =>
                 {
