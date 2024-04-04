@@ -14,12 +14,14 @@ namespace ads.Controllers
         private readonly ITotalAdsClub _totalAdsClub;
         private readonly IClub _club;
         private readonly IExcel _excel;
+        private readonly ICondtx _condtx;
 
-        public TotalAdsClubController(ITotalAdsClub totalAdsClub, IClub club, IExcel excel)
+        public TotalAdsClubController(ITotalAdsClub totalAdsClub, IClub club, IExcel excel, ICondtx condtx)
         {
             _totalAdsClub = totalAdsClub;
             _club = club;
             _excel = excel;
+            _condtx = condtx;
         }
 
         [HttpPost]
@@ -56,6 +58,19 @@ namespace ads.Controllers
         {
             var dateFormat = DateConvertion.ConvertStringDate(date);
             await _totalAdsClub.UpdateClubTotalAverageSales(dateFormat);
+
+            return Ok();
+        }
+
+        [HttpPost]
+        [Route("UpdateClubsOverallSales")]
+        public async Task<ActionResult> UpdateClubsOverallSales(List<string> dates)
+        {
+            foreach (var date in dates)
+            {
+                var dateFormat = DateConvertion.ConvertStringDate(date);
+                await _totalAdsClub.UpdateClubOverallSalesByDateCondtx(dateFormat);
+            }
 
             return Ok();
         }

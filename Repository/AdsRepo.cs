@@ -3,6 +3,7 @@ using ads.Interface;
 using ads.Models.Data;
 using ads.Models.Dto.AdsChain;
 using ads.Models.Dto.AdsClub;
+using ads.Models.Dto.Condtx;
 using ads.Models.Dto.Price;
 using ads.Models.Dto.Sale;
 using ads.Utility;
@@ -35,6 +36,7 @@ namespace ads.Repository
         private readonly ITotalAdsChain _totalAdsChainRepo;
         private readonly IItem _item;
         private readonly IPrice _price;
+        private readonly ICondtx _condtx;
 
         public AdsRepo(
             ISales sales,
@@ -44,7 +46,8 @@ namespace ads.Repository
             ITotalAdsClub totalAdsClubRepo,
             ITotalAdsChain totalAdsChainRepo,
             IItem item,
-            IPrice price)
+            IPrice price,
+            ICondtx condtx)
         {
             _sales = sales;
             _invetory = invetory;
@@ -54,6 +57,7 @@ namespace ads.Repository
             _totalAdsChainRepo = totalAdsChainRepo;
             _item = item;
             _price = price;
+            _condtx = condtx;
         }
 
 
@@ -539,8 +543,9 @@ namespace ads.Repository
             var adsStartDate = new DateTime(AdsDate.Year, AdsDate.Month, AdsDate.Day, 0, 0, 0, 0);
             string format = "yyyy-MM-dd HH:mm:ss.fff";
 
-            var price = await _price.GetPricesByDateAsync(CurrentDateWithZeroTime);
-            var priceDictionary = price.ToDictionary(x => new PriceKey() { Club = x.Club, Sku = x.Sku }, x => x.Value);
+            //overall Sales From condtx table
+            var prices = await _condtx.FetchTotalSalesFromMmsByDateAsync(currentDate.Date);
+            var priceDictionary = _condtx.GetTotalSalesDictionary(prices);
 
             var adsChain = await _totalAdsChainRepo.GetTotalAdsChainByDate($"{adsStartDate:yyyy-MM-dd HH:mm:ss.fff}");
             var adsDayZeorChain = adsChain.Count > 0 ? adsChain[0].EndDate : $"{CurrentDateWithZeroTime:yyyy-MM-dd HH:mm:ss.fff}";
@@ -774,7 +779,7 @@ namespace ads.Repository
                 var hasAds = totalAdsClubDictionary.TryGetValue(new { inv.Sku, inv.Clubs }, out var adsOut);
                 var isAclub = clubsDictionary.TryGetValue(Convert.ToInt32(inv.Clubs), out var StartDate);
 
-                var priceKey = new PriceKey()
+                var priceKey = new CondtxKey()
                 {
                     Sku = hasAds ? adsOut.Sku : inv.Sku,
                     Club = hasAds ? adsOut.Clubs : inv.Clubs

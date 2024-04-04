@@ -9,6 +9,8 @@ using ads.Models.Dto.AdsChain;
 using ads.Models.Dto.AdsClub;
 using DocumentFormat.OpenXml.InkML;
 using ads.Models.Dto.Price;
+using ads.Utility;
+using ads.Models.Dto.Condtx;
 
 namespace ads.Repository
 {
@@ -20,6 +22,7 @@ namespace ads.Repository
         private readonly ISales _sales;
         private readonly IInventory _inventory;
         private readonly IPrice _price;
+        private readonly ICondtx _condtx;
 
         public TotalAdsClubRepo(
             AdsContext context,
@@ -27,7 +30,8 @@ namespace ads.Repository
             IConfiguration configuration,
             ISales sales,
             IInventory inventory,
-            IPrice price)
+            IPrice price,
+            ICondtx condtx)
         {
             _context = context;
             _logs = logs;
@@ -35,6 +39,7 @@ namespace ads.Repository
             _sales = sales;
             _inventory = inventory;
             _price = price;
+            _condtx = condtx;
         }
 
         public async Task<(List<TotalAdsClub>, int totalPages)> GetPaginatedTotalAdsClubs(TotalAdsChainPaginationDto data)
@@ -248,7 +253,6 @@ namespace ads.Repository
             }
             catch (Exception error)
             {
-
                 DateTime endLogs = DateTime.Now;
                 Log.Add(new Logging
                 {
@@ -295,6 +299,49 @@ namespace ads.Repository
             {
 
                 throw;
+            }
+        }
+
+        public async Task UpdateClubOverallSalesByDateCondtx(DateTime date)
+        {
+            var Log = new List<Logging>();
+            DateTime startLogs = DateTime.Now;
+
+            try
+            {
+                var adsClubs = await _context.TotalAdsClubs
+                    .Where(x => x.StartDate == $"{date:yyyy-MM-dd HH:mm:ss.fff}")
+                    .ToListAsync();
+
+                var condtxSales = await _condtx.FetchTotalSalesFromMmsByDateAsync(date);
+                var salesDictionary = _condtx.GetTotalSalesDictionary(condtxSales);
+
+                foreach (var ads in adsClubs)
+                {
+                    var key = new CondtxKey()
+                    {
+                        Club = ads.Clubs,
+                        Sku = ads.Sku
+                    };
+
+                    if(salesDictionary.TryGetValue(key, out var totalSales)) ads.OverallSales = totalSales;
+                }
+
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception error)
+            {
+                DateTime endLogs = DateTime.Now;
+                Log.Add(new Logging
+                {
+                    StartLog = startLogs,
+                    EndLog = endLogs,
+                    Action = "UpdateClubTotalAverageSales",
+                    Message = error.Message,
+                    Record_Date = date
+                }); ;
+
+                _logs.InsertLogs(Log);
             }
         }
     }
