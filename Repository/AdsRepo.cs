@@ -828,7 +828,7 @@ namespace ads.Repository
                         adsOut.Ads = adsOut.Divisor != 0 ? Math.Round(adsOut.Sales / adsOut.Divisor, 2) : 0;
                     }
 
-                    adsOut.OverallSales = hasPrice ? priceOut * perClubSalesToday : 0;
+                    adsOut.OverallSales = hasPrice ? priceOut : 0;
                     adsOut.StartDate = startDateInString;
                     adsPerClubsWithCurrentsales.Add(adsOut);
                 }
