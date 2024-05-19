@@ -549,6 +549,7 @@ namespace ads.Repository
 
             var adsChain = await _totalAdsChainRepo.GetTotalAdsChainByDate($"{adsStartDate:yyyy-MM-dd HH:mm:ss.fff}");
             var adsDayZeorChain = adsChain.Count > 0 ? adsChain[0].EndDate : $"{CurrentDateWithZeroTime:yyyy-MM-dd HH:mm:ss.fff}";
+            
             var numberOfDayZeroChain = DateComputeUtility.GetDifferenceInRange($"{adsStartDate:yyyy-MM-dd HH:mm:ss.fff}", adsDayZeorChain) - 56;
             var numberOfDayZeroChainFinal = numberOfDayZeroChain >= 0 ? numberOfDayZeroChain : 0;
 
@@ -572,7 +573,7 @@ namespace ads.Repository
             var adsChainWithCompleteDivisor = adsChain.Where(x =>
             {
                 DateTime.TryParseExact(x.EndDate, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime adsItemEndDate);
-                var isMember = x.Divisor == 56 && listOfDayZero.Contains(adsItemEndDate);
+                var isMember = x.Divisor == 56 & listOfDayZero.Contains(adsItemEndDate);
 
                 return isMember;
             });
@@ -584,10 +585,41 @@ namespace ads.Repository
                     group =>  group.Select(item => item.Sku).ToList()
              );
 
+            foreach ( var ads in adsChainWithCompleteDivisor)
+            {
+                var diff = DateComputeUtility.GetDifferenceInRange(ads.StartDate, ads.EndDate) - 56;
+                DateTime.TryParseExact(ads.StartDate, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime start);
+                DateTime.TryParseExact(ads.EndDate, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime end);
+
+                if (diff > 0)
+                {
+                    var dates = DateComputeUtility.GetDatesInRange(end, start.AddDays(-55));
+
+                    foreach (var dateOver in dates)
+                    {
+                        var dateString = $"{dateOver:yyyy-MM-dd HH:mm:ss.fff}";
+
+                        if (groupedAdsChain.TryGetValue(dateString, out var skuList))
+                        {
+                            if(!skuList.Contains(ads.Sku)) skuList.Add(ads.Sku);
+                        }
+                        else
+                        {
+                            var list = new List<string>()
+                            {
+                                ads.Sku
+                            };
+
+                            groupedAdsChain.Add(dateString, list);
+                        }
+                    }
+                }
+            }
+
             var adsPerClubsWithCompleteDivisor = adsPerClubs.Where(x =>
             {
                 DateTime.TryParseExact(x.EndDate, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime adsItemEndDate);
-                var isMember = x.Divisor == 56 && listOfDayZero.Contains(adsItemEndDate);
+                var isMember = x.Divisor == 56 & listOfDayZero.Contains(adsItemEndDate);
 
                 return isMember;
             });
@@ -598,6 +630,37 @@ namespace ads.Repository
                     group => group.Key,
                     group =>  group.Select(item => item.Sku).ToList()
                 );
+
+            foreach (var ads in adsPerClubsWithCompleteDivisor)
+            {
+                var diff = DateComputeUtility.GetDifferenceInRange(ads.StartDate, ads.EndDate) - 56;
+                DateTime.TryParseExact(ads.StartDate, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime start);
+                DateTime.TryParseExact(ads.EndDate, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime end);
+
+                if (diff > 0)
+                {
+                    var dates = DateComputeUtility.GetDatesInRange(end, start.AddDays(-56));
+
+                    foreach (var dateOver in dates)
+                    {
+                        var dateString = $"{dateOver:yyyy-MM-dd HH:mm:ss.fff}";
+
+                        if (dictionaryListOfSkuClubs.TryGetValue(dateString, out var skuList))
+                        {
+                            if (!skuList.Contains(ads.Sku)) skuList.Add(ads.Sku);
+                        }
+                        else
+                        {
+                            var list = new List<string>()
+                            {
+                                ads.Sku
+                            };
+
+                            dictionaryListOfSkuClubs.Add(dateString, list);
+                        }
+                    }
+                }
+            }
 
             var mergedDictionarySku= dictionaryListOfSkuClubs
                 .Concat(groupedAdsChain)
@@ -656,23 +719,41 @@ namespace ads.Repository
                         Date = CurrentDateWithZeroTime
                     };
 
-                    var hasSales = salesTotalDictionaryDayZero.TryGetValue(dayZeroKey, out var totalSalesOut);
                     var hasInventory = inventoryTodayDictionaryDayZero.TryGetValue(dayZeroKey, out var totalInvOut);
-
                     var hasInventoryToday = inventoryTotalDictionaryToday.TryGetValue(todayKey, out var totalInvOutToday);
-
                     var daysDifferenceOut = DateComputeUtility.GetDifferenceInRange(ads.StartDate, ads.EndDate);
 
                     if (daysDifferenceOut >= 56 & totalInvOutToday > 0 & ads.Divisor == 56)
                     {
-                        var newEndDate = adsItemEndDate.AddDays(1);
-                        var endDateInStringNew = $"{newEndDate:yyyy-MM-dd HH:mm:ss.fff}";
+                        decimal invtoryDataZero = -1;
 
-                        if (totalInvOut > 0 & totalSalesOut >= 0)
+                        do
+                        {
+                            var key = new SalesKey()
+                            {
+                                Sku = item.Sku,
+                                Date = dateAsKey
+                            };
+
+                            var shit2 = inventoryTodayDictionaryDayZero.TryGetValue(key, out var perClubInvDayZero);
+                            if (perClubInvDayZero == 0)
+                            {
+                                dateAsKey = DateConvertion.ConvertStringDate(dateAsKey.AddDays(1).ToString("yyMMdd"));
+                            }
+   
+                            invtoryDataZero = perClubInvDayZero;
+                        }
+                        while (invtoryDataZero <= 0);
+
+                        dayZeroKey.Date = dateAsKey;
+                        var hasSales = salesTotalDictionaryDayZero.TryGetValue(dayZeroKey, out var totalSalesOut);
+
+                        if (invtoryDataZero > 0 & totalSalesOut >= 0)
                         {
                             ads.Sales -= totalSalesOut;
                             ads.Divisor--;
                         }
+                        var endDateInStringNew = $"{dayZeroKey.Date.AddDays(1):yyyy-MM-dd HH:mm:ss.fff}";
 
                         ads.EndDate = endDateInStringNew;
                     }
@@ -706,7 +787,7 @@ namespace ads.Repository
                         if (ads.Divisor != 56) ads.Divisor++;
 
                         ads.Sales += totalSalesOut;
-                        ads.Ads = ads.Divisor != 0 ? Math.Round(ads.Sales / ads.Divisor, 2) : 0;
+                        ads.Ads = ads.Divisor != 0 ? Math.Round(ads.Sales / ads.Divisor, 3) : 0;
                     }
 
                     ads.StartDate = startDateInString;
@@ -802,16 +883,39 @@ namespace ads.Repository
                     };
 
                     var daysDifferenceOut = DateComputeUtility.GetDifferenceInRange(adsOut.StartDate, adsOut.EndDate);
+                    inventoryDayZeroWithoutNullClubsDictionary.TryGetValue(salesClubKey, out var perClubInvDayZero1);
 
                     if (daysDifferenceOut >= 56 & inv.Inventory > 0 & adsOut.Divisor == 56)
                     {
+                        //get the inventory with the value
+                        decimal invtoryData = -1;
+
+                        do
+                        {
+                            var key = new SalesClubKey()
+                            {
+                                Sku = inv.Sku,
+                                Date = dateAsKey,
+                                Club = inv.Clubs
+                            };
+
+                            inventoryDayZeroWithoutNullClubsDictionary.TryGetValue(key, out var perClubInvDayZero);
+
+                            if (perClubInvDayZero == 0)
+                            {
+                                dateAsKey = DateConvertion.ConvertStringDate(dateAsKey.AddDays(1).ToString("yyMMdd"));
+                            }
+
+                            invtoryData = perClubInvDayZero;
+                        }
+                        while (invtoryData <= 0);
+
+                        salesClubKey.Date = dateAsKey;
                         salesDayZeroWithoutNullClubsDictionary.TryGetValue(salesClubKey, out var perClubSalesDayZero);
-                        inventoryDayZeroWithoutNullClubsDictionary.TryGetValue(salesClubKey, out var perClubInvDayZero);
 
-                        var newEndDate = adsClubEndDate.AddDays(1);
-                        var endDateInStringNew = $"{newEndDate:yyyy-MM-dd HH:mm:ss.fff}";
+                        var endDateInStringNew = $"{salesClubKey.Date.AddDays(1):yyyy-MM-dd HH:mm:ss.fff}";
 
-                        if (perClubInvDayZero > 0 & perClubSalesDayZero >= 0)
+                        if (invtoryData > 0 & perClubSalesDayZero >= 0)
                         {
                             adsOut.Sales -= perClubSalesDayZero;
                             adsOut.Divisor--;
@@ -825,7 +929,7 @@ namespace ads.Repository
                         if (adsOut.Divisor < 56) adsOut.Divisor++;
 
                         adsOut.Sales += perClubSalesToday;
-                        adsOut.Ads = adsOut.Divisor != 0 ? Math.Round(adsOut.Sales / adsOut.Divisor, 2) : 0;
+                        adsOut.Ads = adsOut.Divisor != 0 ? Math.Round(adsOut.Sales / adsOut.Divisor, 3) : 0;
                     }
 
                     adsOut.OverallSales = hasPrice ? priceOut : 0;
