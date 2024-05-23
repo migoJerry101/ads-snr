@@ -736,7 +736,7 @@ namespace ads.Repository
                             };
 
                             var shit2 = inventoryTodayDictionaryDayZero.TryGetValue(key, out var perClubInvDayZero);
-                            if (perClubInvDayZero == 0)
+                            if (perClubInvDayZero <= 0)
                             {
                                 dateAsKey = DateConvertion.ConvertStringDate(dateAsKey.AddDays(1).ToString("yyMMdd"));
                             }
@@ -901,7 +901,7 @@ namespace ads.Repository
 
                             inventoryDayZeroWithoutNullClubsDictionary.TryGetValue(key, out var perClubInvDayZero);
 
-                            if (perClubInvDayZero == 0)
+                            if (perClubInvDayZero <= 0)
                             {
                                 dateAsKey = DateConvertion.ConvertStringDate(dateAsKey.AddDays(1).ToString("yyMMdd"));
                             }
