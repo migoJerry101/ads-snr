@@ -593,7 +593,7 @@ namespace ads.Repository
 
                 if (diff > 0)
                 {
-                    var dates = DateComputeUtility.GetDatesInRange(end, start.AddDays(-55));
+                    var dates = DateComputeUtility.GetDatesInRange(end, start.AddDays(-54));
 
                     foreach (var dateOver in dates)
                     {
@@ -639,7 +639,7 @@ namespace ads.Repository
 
                 if (diff > 0)
                 {
-                    var dates = DateComputeUtility.GetDatesInRange(end, start.AddDays(-56));
+                    var dates = DateComputeUtility.GetDatesInRange(end, start.AddDays(-54));
 
                     foreach (var dateOver in dates)
                     {
