@@ -1,4 +1,5 @@
-﻿using ads.Interface;
+﻿using ads.Data;
+using ads.Interface;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 
@@ -22,6 +23,15 @@ namespace ads.Controllers
         {
             var inventories = await _inventory.GetInventoriesByDateAndClubs(date);
             var test = inventories.OrderByDescending(x => x.Clubs).ToList();
+            return Ok();
+        }
+
+        [HttpPost]
+        [Route("GetInventoriesBackupByDate")]
+        public async Task<IActionResult> GetInventoriesBackupByDate(DateTime date)
+        {
+            await _inventory.ImportInventoryBackUpByDate(date);
+
             return Ok();
         }
     }

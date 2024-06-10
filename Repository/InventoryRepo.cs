@@ -10,6 +10,9 @@ using ads.Models.Dto.ItemsDto;
 using System.Collections.Immutable;
 using ads.Models.Dto.Sale;
 using ads.Models.Dto.Inventory;
+using DocumentFormat.OpenXml.Wordprocessing;
+using Microsoft.VisualBasic;
+using DocumentFormat.OpenXml.Bibliography;
 
 namespace ads.Repository
 {
@@ -20,16 +23,18 @@ namespace ads.Repository
         private readonly AdsContext _adsContext;
         private readonly IItem _item;
         private readonly IClub _club;
+        private readonly ISales _sales;
 
         public List<Inv> _inventoryList = new List<Inv>();
 
-        public InventoryRepo(IOpenQuery openQuery, ILogs logs, AdsContext adsContext, IItem item, IClub club)
+        public InventoryRepo(IOpenQuery openQuery, ILogs logs, AdsContext adsContext, IItem item, IClub club, ISales sales)
         {
             _logs = logs;
             _openQuery = openQuery;
             _adsContext = adsContext;
             _item = item;
             _club = club;
+            _sales = sales;
         }
 
         //Get Inventory
@@ -109,6 +114,8 @@ namespace ads.Repository
                     //Bluk insert in tbl_Data table
                     using (var transaction = db.Con.BeginTransaction())
                     {
+
+                        var shit = ListInventory.Where(x => x.Inventory > 0);
                         using (var bulkCopy = new SqlBulkCopy(db.Con, SqlBulkCopyOptions.Default, transaction))
                         {
                             bulkCopy.DestinationTableName = "tbl_inv";
@@ -607,6 +614,23 @@ namespace ads.Repository
                 _logs.InsertLogs(logs);
 
                 throw;
+            }
+        }
+
+        public async Task ImportInventoryBackUpByDate(DateTime date)
+        {
+            var backupDate = date.ToString("yyMMdd");
+
+            using (OledbCon db = new OledbCon())
+            {
+                var itemList = await _item.GetAllSkuWithDate();
+                var items = itemList.Where(x => x.CreatedDate <= date.Date);
+
+                var inventories = await _openQuery.GetIventoryBackupByDate(db,date);
+                var sales = await _openQuery.ListOfSales(db, backupDate, backupDate);
+
+                await GetInventoryAsync(backupDate, backupDate, items, sales, inventories);
+                await _sales.GetSalesAsync(backupDate, backupDate, items, sales, inventories);
             }
         }
     }

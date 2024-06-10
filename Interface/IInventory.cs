@@ -22,5 +22,6 @@ namespace ads.Interface
         Task<List<Inv>> GetInventoriesByDates(List<DateTime> dates);
         Task<List<InventoryDto>> GetInventoriesWithFilteredSku(Dictionary<string, List<string>> sku, List<DateTime> days);
         Task<List<InventoryDto>> GetInventoriesByDateAndClubs(DateTime date, IEnumerable<int> skus);
+        Task ImportInventoryBackUpByDate(DateTime date);
     }
 }
