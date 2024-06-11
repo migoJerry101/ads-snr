@@ -12,5 +12,6 @@ namespace ads.Interface
         Task ImportClubs(OledbCon db);
         Task ImportItems(OledbCon db);
         Task<List<string>> ListIventorySkuPerClub(OledbCon db, string club);
+        Task<List<GeneralModel>> GetIventoryBackupByDate(OledbCon db, DateTime date);
     }
 }

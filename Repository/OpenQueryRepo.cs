@@ -195,6 +195,62 @@ namespace ads.Repository
             return list;
         }
 
+        public async Task<List<GeneralModel>> GetIventoryBackupByDate(OledbCon db, DateTime date)
+        {
+            var list = new List<GeneralModel>();
+            var Log = new List<Logging>();
+            var startLogs = DateTime.Now;
+
+            var convertedDate = date.ToString("yyMMdd");
+
+            try
+            {
+                var query = $"select * from openquery (SNR,'select INUMBR, ISTORE, IBHAND  from MACE.IBAL{convertedDate}')";
+
+                using (SqlCommand cmd = new SqlCommand(query, db.Con))
+                {
+                    if (db.Con.State == ConnectionState.Closed)
+                    {
+                        db.Con.Open();
+                    }
+
+                    cmd.CommandTimeout = 18000;
+
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            GeneralModel Olde = new GeneralModel
+                            {
+                                INUMBR2 = reader["INUMBR"].ToString(),
+                                ISTORE = reader["ISTORE"].ToString(),
+                                IBHAND = Convert.ToDecimal(reader["IBHAND"].ToString())
+                            };
+
+                            list.Add(Olde);
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                DateTime endLogs = DateTime.Now;
+                Log.Add(new Logging
+                {
+                    StartLog = startLogs,
+                    EndLog = endLogs,
+                    Action = "Error",
+                    Message = "ListIventory : " + e.Message + " ",
+                    Record_Date = Convert.ToDateTime(startLogs.ToString("yyyy-MM-dd 00:00:00.000"))
+
+                });
+
+                _logs.InsertLogs(Log);
+            }
+
+            return list;
+        }
+
         //ListTBLSTR - List of ALL STORE with Filter STPOLL = ''Y'' AND STSDAT > 0
         //STPOLL - Identify Store Open
         // STSDAT - Date Open of Store
