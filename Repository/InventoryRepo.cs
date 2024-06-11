@@ -114,8 +114,6 @@ namespace ads.Repository
                     //Bluk insert in tbl_Data table
                     using (var transaction = db.Con.BeginTransaction())
                     {
-
-                        var shit = ListInventory.Where(x => x.Inventory > 0);
                         using (var bulkCopy = new SqlBulkCopy(db.Con, SqlBulkCopyOptions.Default, transaction))
                         {
                             bulkCopy.DestinationTableName = "tbl_inv";
